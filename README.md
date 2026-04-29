@@ -2,7 +2,7 @@
 
 A small Vite + React + TypeScript app that connects to **MCP servers over HTTP** from the browser, lists their tools, and lets you invoke them with auto-generated forms.
 
-Pre-configured to work with every server from [awesome-mcp-servers](https://github.com/OrenVill/awesome-mcp-servers) (unified-mcp on `:8000` plus 16 single-API servers on `:3500`–`:3515`), but you can add any custom MCP HTTP server too.
+Add any MCP HTTP endpoint (your own or any of the 17 servers in [awesome-mcp-servers](https://github.com/OrenVill/awesome-mcp-servers) on `:8000` and `:3500`–`:3515`) — the explorer auto-connects on add and persists the list to `localStorage`.
 
 ## Features
 
