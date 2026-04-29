@@ -1,43 +1,68 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+export interface ServerFormValues {
+  name: string;
+  url: string;
+  description?: string;
+}
 
 interface Props {
   open: boolean;
+  mode: 'add' | 'edit';
+  initialValues?: ServerFormValues;
   onClose: () => void;
-  onAdd: (input: { name: string; url: string; description?: string }) => void;
-  existingIds: Set<string>;
+  onSubmit: (values: ServerFormValues) => void;
+  validate?: (values: ServerFormValues) => string | null;
 }
 
-export function AddServerDialog({ open, onClose, onAdd, existingIds }: Props) {
+export function ServerFormDialog({
+  open,
+  mode,
+  initialValues,
+  onClose,
+  onSubmit,
+  validate,
+}: Props) {
   const [name, setName] = useState('');
-  const [url, setUrl] = useState('http://localhost:3500/mcp');
+  const [url, setUrl] = useState('http://localhost:8000/mcp');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setName(initialValues?.name ?? '');
+      setUrl(initialValues?.url ?? 'http://localhost:8000/mcp');
+      setDescription(initialValues?.description ?? '');
+      setError(null);
+    }
+  }, [open, initialValues]);
 
   if (!open) return null;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!name.trim()) {
+    const values: ServerFormValues = {
+      name: name.trim(),
+      url: url.trim(),
+      description: description.trim() || undefined,
+    };
+    if (!values.name) {
       setError('Name is required');
       return;
     }
     try {
-      new URL(url);
+      new URL(values.url);
     } catch {
       setError('URL is invalid');
       return;
     }
-    const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    if (existingIds.has(id)) {
-      setError(`A server named "${name}" already exists`);
+    const externalError = validate?.(values);
+    if (externalError) {
+      setError(externalError);
       return;
     }
-    onAdd({ name: name.trim(), url: url.trim(), description: description.trim() || undefined });
-    setName('');
-    setDescription('');
-    setUrl('http://localhost:3500/mcp');
-    onClose();
+    onSubmit(values);
   }
 
   return (
@@ -50,7 +75,9 @@ export function AddServerDialog({ open, onClose, onAdd, existingIds }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="bg-zinc-900 border border-zinc-700 rounded-lg w-full max-w-md p-5 space-y-3"
       >
-        <h3 className="text-zinc-100 font-semibold">Add MCP Server</h3>
+        <h3 className="text-zinc-100 font-semibold">
+          {mode === 'add' ? 'Add MCP Server' : 'Edit MCP Server'}
+        </h3>
         <label className="block text-xs text-zinc-400">
           Name
           <input
@@ -59,6 +86,7 @@ export function AddServerDialog({ open, onClose, onAdd, existingIds }: Props) {
             onChange={(e) => setName(e.target.value)}
             placeholder="My local server"
             className="mt-1 w-full px-2 py-1.5 rounded bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm focus:outline-none focus:border-emerald-500"
+            autoFocus
           />
         </label>
         <label className="block text-xs text-zinc-400">
@@ -67,7 +95,7 @@ export function AddServerDialog({ open, onClose, onAdd, existingIds }: Props) {
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="http://localhost:3500/mcp"
+            placeholder="http://localhost:8000/mcp"
             className="mt-1 w-full px-2 py-1.5 rounded bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm font-mono focus:outline-none focus:border-emerald-500"
           />
         </label>
@@ -93,7 +121,7 @@ export function AddServerDialog({ open, onClose, onAdd, existingIds }: Props) {
             type="submit"
             className="text-sm px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white"
           >
-            Add
+            {mode === 'add' ? 'Add & connect' : 'Save'}
           </button>
         </div>
       </form>

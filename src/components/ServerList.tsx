@@ -6,6 +6,7 @@ interface Props {
   onSelect: (id: string) => void;
   onConnect: (id: string) => void;
   onDisconnect: (id: string) => void;
+  onEdit: (id: string) => void;
   onRemove: (id: string) => void;
   onAddClick: () => void;
 }
@@ -30,6 +31,7 @@ export function ServerList({
   onSelect,
   onConnect,
   onDisconnect,
+  onEdit,
   onRemove,
   onAddClick,
 }: Props) {
@@ -42,12 +44,17 @@ export function ServerList({
         <button
           type="button"
           onClick={onAddClick}
-          className="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+          className="text-xs px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white"
         >
           + Add
         </button>
       </div>
       <ul className="flex-1 overflow-y-auto">
+        {servers.length === 0 && (
+          <li className="px-4 py-6 text-center text-sm text-zinc-500">
+            No servers yet. Click <span className="text-zinc-300">+ Add</span> to register one.
+          </li>
+        )}
         {servers.map((s) => {
           const isSelected = s.id === selectedId;
           return (
@@ -69,11 +76,22 @@ export function ServerList({
                     {s.name}
                   </span>
                 </div>
-                {s.custom && (
+                <div className="flex gap-1 shrink-0">
                   <button
                     type="button"
-                    title="Remove custom server"
-                    className="text-zinc-500 hover:text-red-400 text-xs"
+                    title="Edit"
+                    className="text-zinc-500 hover:text-zinc-200 text-xs px-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(s.id);
+                    }}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    title="Remove"
+                    className="text-zinc-500 hover:text-red-400 text-xs px-1"
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemove(s.id);
@@ -81,9 +99,9 @@ export function ServerList({
                   >
                     ✕
                   </button>
-                )}
+                </div>
               </div>
-              <div className="text-xs text-zinc-500 truncate mt-0.5">
+              <div className="text-xs text-zinc-500 truncate mt-0.5 font-mono">
                 {s.url}
               </div>
               {s.description && (
@@ -92,11 +110,11 @@ export function ServerList({
                 </div>
               )}
               {s.error && (
-                <div className="text-xs text-red-400 mt-1 truncate">
+                <div className="text-xs text-red-400 mt-1 truncate" title={s.error}>
                   {s.error}
                 </div>
               )}
-              <div className="mt-2 flex gap-1">
+              <div className="mt-2 flex gap-1 items-center">
                 {s.status === 'connected' ? (
                   <button
                     type="button"

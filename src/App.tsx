@@ -2,48 +2,41 @@ import { useEffect, useMemo, useState } from 'react';
 import { ServerList } from './components/ServerList';
 import { ToolList } from './components/ToolList';
 import { ToolDetail } from './components/ToolDetail';
-import { AddServerDialog } from './components/AddServerDialog';
-import { buildDefaultServers } from './lib/defaultServers';
+import {
+  ServerFormDialog,
+  type ServerFormValues,
+} from './components/ServerFormDialog';
 import { connect, disconnect } from './lib/mcpClient';
 import { loadServers, saveServers } from './lib/storage';
 import type { ServerEntry } from './types';
 
-function mergeWithStored(): ServerEntry[] {
-  const defaults = buildDefaultServers();
+function loadInitial(): ServerEntry[] {
   const stored = loadServers();
-  if (!stored) return defaults;
-  const byId = new Map<string, ServerEntry>();
-  for (const d of defaults) byId.set(d.id, d);
-  for (const s of stored) {
-    const existing = byId.get(s.id);
-    if (existing) {
-      byId.set(s.id, {
-        ...existing,
-        name: s.name,
-        url: s.url,
-        description: s.description,
-      });
-    } else if (s.custom) {
-      byId.set(s.id, {
-        id: s.id,
-        name: s.name,
-        url: s.url,
-        description: s.description,
-        custom: true,
-        status: 'disconnected',
-      });
-    }
-  }
-  return Array.from(byId.values());
+  if (!stored) return [];
+  return stored.map((s) => ({
+    id: s.id,
+    name: s.name,
+    url: s.url,
+    description: s.description,
+    custom: true,
+    status: 'disconnected' as const,
+  }));
+}
+
+function makeId(name: string, existing: Set<string>): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'server';
+  if (!existing.has(base)) return base;
+  let n = 2;
+  while (existing.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 export default function App() {
-  const [servers, setServers] = useState<ServerEntry[]>(() => mergeWithStored());
-  const [selectedId, setSelectedId] = useState<string | null>(
-    servers[0]?.id ?? null,
-  );
+  const [servers, setServers] = useState<ServerEntry[]>(() => loadInitial());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedToolName, setSelectedToolName] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     saveServers(servers);
@@ -58,6 +51,11 @@ export default function App() {
     if (!selectedServer || !selectedToolName) return null;
     return selectedServer.tools?.find((t) => t.name === selectedToolName) ?? null;
   }, [selectedServer, selectedToolName]);
+
+  const editingServer = useMemo(
+    () => (editingId ? servers.find((s) => s.id === editingId) ?? null : null),
+    [servers, editingId],
+  );
 
   function updateServer(id: string, patch: Partial<ServerEntry>) {
     setServers((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -87,18 +85,79 @@ export default function App() {
     setSelectedToolName(null);
   }
 
-  function handleAdd(input: { name: string; url: string; description?: string }) {
-    const id = input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const entry: ServerEntry = {
-      id,
-      name: input.name,
-      url: input.url,
-      description: input.description,
-      custom: true,
-      status: 'disconnected',
-    };
-    setServers((prev) => [...prev, entry]);
-    setSelectedId(id);
+  function handleAddClick() {
+    setEditingId(null);
+    setDialogMode('add');
+  }
+
+  function handleEditClick(id: string) {
+    setEditingId(id);
+    setDialogMode('edit');
+  }
+
+  function handleDialogClose() {
+    setDialogMode(null);
+    setEditingId(null);
+  }
+
+  function handleSubmit(values: ServerFormValues) {
+    if (dialogMode === 'add') {
+      const existingIds = new Set(servers.map((s) => s.id));
+      const id = makeId(values.name, existingIds);
+      const entry: ServerEntry = {
+        id,
+        name: values.name,
+        url: values.url,
+        description: values.description,
+        custom: true,
+        status: 'disconnected',
+      };
+      setServers((prev) => [...prev, entry]);
+      setSelectedId(id);
+      setSelectedToolName(null);
+      handleDialogClose();
+      void handleConnect(id);
+      return;
+    }
+
+    if (dialogMode === 'edit' && editingId) {
+      const target = servers.find((s) => s.id === editingId);
+      if (!target) {
+        handleDialogClose();
+        return;
+      }
+      const urlChanged = target.url !== values.url;
+      updateServer(editingId, {
+        name: values.name,
+        url: values.url,
+        description: values.description,
+      });
+      if (urlChanged && target.status === 'connected') {
+        void disconnect(editingId).then(() => {
+          updateServer(editingId, { status: 'disconnected', tools: undefined });
+          void handleConnect(editingId);
+        });
+      }
+      handleDialogClose();
+    }
+  }
+
+  function dialogValidate(values: ServerFormValues): string | null {
+    const id = makeId(values.name, new Set());
+    if (dialogMode === 'add') {
+      if (servers.some((s) => s.id === id || s.name === values.name)) {
+        return `A server named "${values.name}" already exists`;
+      }
+    } else if (dialogMode === 'edit' && editingId) {
+      if (
+        servers.some(
+          (s) => s.id !== editingId && s.name === values.name,
+        )
+      ) {
+        return `Another server is already named "${values.name}"`;
+      }
+    }
+    return null;
   }
 
   async function handleRemove(id: string) {
@@ -110,7 +169,14 @@ export default function App() {
     }
   }
 
-  const existingIds = new Set(servers.map((s) => s.id));
+  const dialogInitial: ServerFormValues | undefined =
+    dialogMode === 'edit' && editingServer
+      ? {
+          name: editingServer.name,
+          url: editingServer.url,
+          description: editingServer.description,
+        }
+      : undefined;
 
   return (
     <div className="h-full flex flex-col">
@@ -120,17 +186,15 @@ export default function App() {
           <h1 className="text-zinc-100 font-semibold tracking-wide">
             MCP Explorer
           </h1>
-          <span className="text-xs text-zinc-500">
-            connect, list, invoke
-          </span>
+          <span className="text-xs text-zinc-500">connect, list, invoke</span>
         </div>
         <a
-          href="https://github.com/OrenVill/awesome-mcp-servers"
+          href="https://github.com/OrenVill/mcp-explorer"
           target="_blank"
           rel="noreferrer"
           className="text-xs text-zinc-400 hover:text-zinc-200"
         >
-          awesome-mcp-servers ↗
+          OrenVill/mcp-explorer ↗
         </a>
       </header>
       <div className="flex-1 flex min-h-0">
@@ -140,8 +204,9 @@ export default function App() {
           onSelect={handleSelect}
           onConnect={handleConnect}
           onDisconnect={handleDisconnect}
+          onEdit={handleEditClick}
           onRemove={handleRemove}
-          onAddClick={() => setAddOpen(true)}
+          onAddClick={handleAddClick}
         />
         <ToolList
           server={selectedServer}
@@ -150,11 +215,13 @@ export default function App() {
         />
         <ToolDetail server={selectedServer} tool={selectedTool} />
       </div>
-      <AddServerDialog
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onAdd={handleAdd}
-        existingIds={existingIds}
+      <ServerFormDialog
+        open={dialogMode !== null}
+        mode={dialogMode ?? 'add'}
+        initialValues={dialogInitial}
+        onClose={handleDialogClose}
+        onSubmit={handleSubmit}
+        validate={dialogValidate}
       />
     </div>
   );
