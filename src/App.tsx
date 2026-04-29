@@ -6,6 +6,7 @@ import {
   ServerFormDialog,
   type ServerFormValues,
 } from './components/ServerFormDialog';
+import { Logo } from './components/Logo';
 import { connect, disconnect } from './lib/mcpClient';
 import { loadServers, saveServers } from './lib/storage';
 import type { ServerEntry } from './types';
@@ -183,16 +184,7 @@ export default function App() {
     <div className="h-full flex flex-col bg-zinc-950">
       <header className="border-b border-zinc-800/80 px-5 py-3 flex items-center justify-between bg-zinc-950/80 backdrop-blur">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30">
-            <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" aria-hidden>
-              <path
-                d="M5 12h14M12 5v14"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
+          <Logo size={30} className="shadow-lg shadow-violet-900/30 rounded-[8px]" />
           <div className="flex items-baseline gap-2">
             <h1 className="text-zinc-50 font-semibold tracking-tight">
               MCP Explorer
@@ -216,7 +208,7 @@ export default function App() {
           <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden>
             <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
           </svg>
-          OrenVill/mcp-explorer
+          GitHub
         </a>
       </header>
       <div className="flex-1 flex min-h-0">

@@ -2,7 +2,7 @@
 
 A small Vite + React + TypeScript app that connects to **MCP servers over HTTP** from the browser, lists their tools, and lets you invoke them with auto-generated forms.
 
-Add any MCP HTTP endpoint (your own or any of the 17 servers in [awesome-mcp-servers](https://github.com/OrenVill/awesome-mcp-servers) on `:8000` and `:3500`–`:3515`) — the explorer auto-connects on add and persists the list to `localStorage`.
+Add any MCP HTTP endpoint, the explorer auto-connects on add and persists the list to `localStorage`.
 
 ## Features
 
@@ -25,7 +25,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Then start one of the MCP servers from [awesome-mcp-servers](https://github.com/OrenVill/awesome-mcp-servers) (e.g. `npm run start:http` from that repo to bring up `unified-mcp` on `:8000`) and click **Connect** in the sidebar.
+Then make sure an MCP server is running somewhere (it must expose a streamable-HTTP endpoint, typically at `/mcp`) and click **+ Add** in the sidebar.
 
 ## Build
 
@@ -36,17 +36,7 @@ npm run preview      # serve dist/ locally
 
 ## Connecting to a server
 
-The app starts with no servers. Click **+ Add** in the sidebar, fill in name and the streamable HTTP URL (typically `http://host:port/mcp`), and the explorer will register and auto-connect.
-
-Common URLs for the [awesome-mcp-servers](https://github.com/OrenVill/awesome-mcp-servers) bundle if you're running it locally:
-
-| Server | URL |
-|---|---|
-| Unified MCP | `http://localhost:8000/mcp` |
-| Open-Meteo / REST Countries / Hacker News / Wikipedia | `http://localhost:3500-3503/mcp` |
-| arXiv / Open Library / Nominatim / Dictionary | `http://localhost:3504-3507/mcp` |
-| Frankfurter / USGS / SpaceX / GitHub | `http://localhost:3508-3511/mcp` |
-| MDN / Datamuse / Trivia / Crossref | `http://localhost:3512-3515/mcp` |
+The app starts with no servers. Click **+ Add** in the sidebar, fill in a name and the streamable HTTP URL (typically `http://host:port/mcp`), and the explorer will register and auto-connect.
 
 Use the **✎** button next to a server to edit its name, URL, or description; **✕** removes it.
 
@@ -62,6 +52,7 @@ src/
 │   ├── mcpClient.ts             # Client + StreamableHTTPClientTransport wrapper
 │   └── storage.ts               # localStorage persistence for the server list
 └── components/
+    ├── Logo.tsx                 # logo mark (used in navbar + favicon)
     ├── ServerList.tsx           # left column — connect / disconnect / edit / remove
     ├── ToolList.tsx             # middle column — tools advertised by the server
     ├── ToolDetail.tsx           # right column — form + result
@@ -72,7 +63,7 @@ src/
 
 ## CORS notes
 
-The browser sends preflight requests with `Mcp-Session-Id` and `Mcp-Protocol-Version` headers. Any server you connect to must allow those in its `Access-Control-Allow-Headers` and expose `Mcp-Session-Id` via `Access-Control-Expose-Headers`. The servers in [awesome-mcp-servers](https://github.com/OrenVill/awesome-mcp-servers) already do.
+The browser sends preflight requests with `Mcp-Session-Id` and `Mcp-Protocol-Version` headers. Any server you connect to must allow those in its `Access-Control-Allow-Headers` and expose `Mcp-Session-Id` via `Access-Control-Expose-Headers`.
 
 ## License
 
