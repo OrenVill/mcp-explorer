@@ -9,16 +9,20 @@ interface Props {
 export function ToolList({ server, selectedToolName, onSelect }: Props) {
   if (!server) {
     return (
-      <div className="w-72 shrink-0 border-r border-zinc-800 p-4 text-sm text-zinc-500">
-        Select a server to see its tools.
+      <div className="w-72 shrink-0 border-r border-zinc-800/80 p-6 text-sm text-zinc-500 bg-zinc-950/20">
+        <div className="text-zinc-600 text-xs uppercase tracking-wider mb-2">Tools</div>
+        Select a server from the left.
       </div>
     );
   }
 
   if (server.status !== 'connected') {
     return (
-      <div className="w-72 shrink-0 border-r border-zinc-800 p-4 text-sm text-zinc-500">
-        Connect to <span className="text-zinc-300">{server.name}</span> to see tools.
+      <div className="w-72 shrink-0 border-r border-zinc-800/80 p-6 text-sm bg-zinc-950/20">
+        <div className="text-zinc-600 text-xs uppercase tracking-wider mb-2">Tools</div>
+        <p className="text-zinc-400">
+          Connect to <span className="text-zinc-200 font-medium">{server.name}</span> to discover tools.
+        </p>
       </div>
     );
   }
@@ -26,15 +30,18 @@ export function ToolList({ server, selectedToolName, onSelect }: Props) {
   const tools = server.tools ?? [];
 
   return (
-    <aside className="w-72 shrink-0 border-r border-zinc-800 flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-zinc-800">
-        <h2 className="text-sm font-semibold tracking-wide text-zinc-200">
-          Tools <span className="text-zinc-500 font-normal">({tools.length})</span>
+    <aside className="w-72 shrink-0 border-r border-zinc-800/80 flex flex-col h-full bg-zinc-950/20">
+      <div className="px-4 py-3.5 border-b border-zinc-800/80 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-zinc-400">
+          Tools
         </h2>
+        <span className="text-[11px] text-zinc-600">{tools.length}</span>
       </div>
-      <ul className="flex-1 overflow-y-auto">
+      <ul className="flex-1 overflow-y-auto py-1">
         {tools.length === 0 && (
-          <li className="px-4 py-3 text-sm text-zinc-500">No tools advertised.</li>
+          <li className="px-4 py-6 text-sm text-zinc-500 text-center">
+            No tools advertised.
+          </li>
         )}
         {tools.map((t: ToolDef) => {
           const isSelected = t.name === selectedToolName;
@@ -44,13 +51,18 @@ export function ToolList({ server, selectedToolName, onSelect }: Props) {
               key={t.name}
               onClick={() => onSelect(t.name)}
               className={[
-                'px-4 py-2 cursor-pointer border-b border-zinc-900',
-                isSelected ? 'bg-zinc-900' : 'hover:bg-zinc-900/60',
+                'group relative mx-1.5 my-0.5 px-3 py-2 rounded-lg cursor-pointer transition-all',
+                isSelected
+                  ? 'bg-zinc-900/90 border border-zinc-700/70'
+                  : 'border border-transparent hover:bg-zinc-900/50 hover:border-zinc-800/80',
               ].join(' ')}
             >
-              <div className="font-mono text-xs text-zinc-100">{t.name}</div>
+              {isSelected && (
+                <span className="absolute left-0 top-2 bottom-2 w-0.5 -translate-x-1.5 bg-violet-500 rounded-full" />
+              )}
+              <div className="font-mono text-xs text-zinc-100 truncate">{t.name}</div>
               {desc && (
-                <div className="text-xs text-zinc-500 mt-0.5 line-clamp-2">
+                <div className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2 leading-snug">
                   {desc}
                 </div>
               )}

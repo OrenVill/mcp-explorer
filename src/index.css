@@ -1,20 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  color-scheme: dark only;
 }
 
 html, body, #root {
   height: 100%;
   margin: 0;
+  background-color: #09090b;
+  color: #e4e4e7;
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background-color: #0a0a0b;
-  color: #e5e7eb;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv11", "ss01", "ss03";
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbars — slim, dark */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 8px;
+  border: 2px solid #09090b;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Selection */
+::selection {
+  background: rgba(167, 139, 250, 0.3);
+  color: #f4f4f5;
+}
+
+/* Focus rings */
+:focus-visible {
+  outline: none;
+}
+input:focus, textarea:focus, select:focus, button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.4);
+  border-color: #a78bfa !important;
+}
+
+/* Subtle radial backdrop */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(900px 500px at 12% -10%, rgba(124, 58, 237, 0.08), transparent 60%),
+    radial-gradient(700px 400px at 100% 100%, rgba(16, 185, 129, 0.05), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
 }
