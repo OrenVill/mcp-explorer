@@ -27,12 +27,36 @@ npm run dev          # http://localhost:5173
 
 Then make sure an MCP server is running somewhere (it must expose a streamable-HTTP endpoint, typically at `/mcp`) and click **+ Add** in the sidebar.
 
-## Build
+## Run as a CLI
+
+Install globally to get an `mcp-explorer` command that builds the app and serves the production bundle on `http://127.0.0.1:4173/` — and opens your default browser.
+
+```bash
+npm install -g .          # from a checkout, or `npm link`
+mcp-explorer              # build + start + open browser
+mcp-explorer 3000         # custom port
+mcp-explorer --no-open    # skip browser (also: OPEN=0)
+```
+
+The CLI runs `vite build` silently and prints a single colored ready line:
+
+```
+  mcp-explorer  ➜  http://127.0.0.1:4173/
+```
+
+If the build fails, the captured vite output is printed.
+
+## Build / serve
 
 ```bash
 npm run build        # tsc + vite build → dist/
-npm run preview      # serve dist/ locally
+npm start            # serve dist/ via the built-in static server (server.js)
+npm run preview      # vite preview (dev-only sanity check)
 ```
+
+`npm start` runs a dependency-free Node static server (`server.js`) that serves
+`dist/` with proper MIME types, immutable cache headers for hashed assets, and
+SPA fallback. Configure with `PORT=3000 npm start` or `node server.js 3000`.
 
 ## Connecting to a server
 
@@ -43,6 +67,9 @@ Use the **✎** button next to a server to edit its name, URL, or description; *
 ## Layout
 
 ```
+bin/
+└── mcp-explorer.js              # CLI: vite build (silent) → server.js → opens browser
+server.js                        # zero-dep static server for dist/ (used by `npm start`)
 src/
 ├── App.tsx                      # 3-column layout + state
 ├── main.tsx                     # entry
