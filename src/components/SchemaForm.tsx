@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { JsonSchema, JsonSchemaProperty } from '../types';
 
 interface Props {
@@ -14,6 +15,46 @@ function fieldType(prop: JsonSchemaProperty): string {
     return prop.type.find((t) => t !== 'null') ?? 'string';
   }
   return prop.type ?? 'string';
+}
+
+interface JsonTextareaProps {
+  value: unknown;
+  placeholder: string;
+  className: string;
+  onChange: (value: unknown) => void;
+}
+
+function JsonTextarea({ value, placeholder, className, onChange }: JsonTextareaProps) {
+  const [raw, setRaw] = useState(() =>
+    value === undefined ? '' : JSON.stringify(value, null, 2)
+  );
+
+  // Resync when parent clears the field (e.g. tool/server change resets values to {}).
+  useEffect(() => {
+    if (value === undefined) setRaw('');
+  }, [value]);
+
+  return (
+    <textarea
+      rows={4}
+      value={raw}
+      placeholder={placeholder}
+      className={className}
+      onChange={(e) => {
+        const next = e.target.value;
+        setRaw(next);
+        if (next === '') {
+          onChange(undefined);
+          return;
+        }
+        try {
+          onChange(JSON.parse(next));
+        } catch {
+          /* invalid JSON in progress — keep raw text, don't push to parent */
+        }
+      }}
+    />
+  );
 }
 
 export function SchemaForm({ schema, values, onChange }: Props) {
@@ -97,20 +138,11 @@ export function SchemaForm({ schema, values, onChange }: Props) {
                 className={inputClass}
               />
             ) : t === 'object' || t === 'array' ? (
-              <textarea
-                rows={4}
-                value={value === undefined ? '' : JSON.stringify(value, null, 2)}
+              <JsonTextarea
+                value={value}
                 placeholder={t === 'array' ? '[]' : '{}'}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === '') return onChange(key, undefined);
-                  try {
-                    onChange(key, JSON.parse(raw));
-                  } catch {
-                    /* invalid JSON, keep typing */
-                  }
-                }}
                 className={`${inputClass} font-mono`}
+                onChange={(v) => onChange(key, v)}
               />
             ) : (
               <input
