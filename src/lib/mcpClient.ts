@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { ToolDef, ToolResult } from '../types';
+import type { ServerAuth, ToolDef, ToolResult } from '../types';
 
 const clients = new Map<string, Client>();
 const transports = new Map<string, StreamableHTTPClientTransport>();
@@ -12,10 +12,60 @@ function proxiedUrl(target: string): URL {
   return new URL(`/__mcp_proxy?target=${encodeURIComponent(target)}`, base);
 }
 
-export async function connect(serverId: string, url: string): Promise<ToolDef[]> {
+/** UTF-8 safe Base64 (for HTTP Basic credentials beyond Latin-1). */
+function utf8ToBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary);
+}
+
+/** Builds RequestInit headers from persisted MCP auth (StreamableHTTPClientTransport merges these on every request). */
+export function requestInitFromAuth(auth: ServerAuth | undefined): RequestInit | undefined {
+  if (!auth || auth.method === 'none') return undefined;
+
+  const headers = new Headers();
+
+  switch (auth.method) {
+    case 'bearer': {
+      const t = auth.bearerToken?.trim();
+      if (t) headers.set('Authorization', `Bearer ${t}`);
+      break;
+    }
+    case 'api_key': {
+      const name = auth.apiKeyHeader?.trim();
+      const value = auth.apiKeyValue?.trim();
+      if (name && value) headers.set(name, value);
+      break;
+    }
+    case 'basic': {
+      const u = auth.basicUsername ?? '';
+      const p = auth.basicPassword ?? '';
+      headers.set('Authorization', `Basic ${utf8ToBase64(`${u}:${p}`)}`);
+      break;
+    }
+    default:
+      break;
+  }
+
+  if ([...headers.keys()].length === 0) return undefined;
+  return { headers };
+}
+
+export async function connect(
+  serverId: string,
+  url: string,
+  auth?: ServerAuth,
+): Promise<ToolDef[]> {
   await disconnect(serverId);
 
-  const transport = new StreamableHTTPClientTransport(proxiedUrl(url));
+  const requestInit = requestInitFromAuth(auth);
+  const transport = new StreamableHTTPClientTransport(
+    proxiedUrl(url),
+    requestInit ? { requestInit } : undefined,
+  );
   const client = new Client(
     { name: 'mcp-explorer', version: '0.1.0' },
     { capabilities: {} },

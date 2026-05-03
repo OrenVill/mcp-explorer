@@ -1,5 +1,14 @@
 import http from 'node:http';
 import https from 'node:https';
+import { setDefaultResultOrder } from 'node:dns';
+
+// Many local MCP servers bind only to 127.0.0.1, but on Linux Node's default
+// DNS order can resolve "localhost" to ::1 first, producing ECONNREFUSED.
+try {
+  setDefaultResultOrder('ipv4first');
+} catch {
+  /* older Node — ignore */
+}
 
 export const PROXY_PATH = '/__mcp_proxy';
 
@@ -77,10 +86,14 @@ export function handleMcpProxy(req, res) {
   );
 
   upstream.on('error', (err) => {
+    const detail = err.code ? `${err.code} ${err.message}` : err.message;
+    console.error(
+      `[mcp-explorer] proxy upstream error for ${req.method} ${target}: ${detail}`,
+    );
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
     }
-    res.end(`Bad Gateway: ${err.message}`);
+    res.end(`Bad Gateway: ${detail}`);
   });
 
   req.on('aborted', () => upstream.destroy());

@@ -4,7 +4,7 @@ const KEY = 'mcp-explorer.servers.v1';
 
 type StoredServer = Pick<
   ServerEntry,
-  'id' | 'name' | 'url' | 'description' | 'custom'
+  'id' | 'name' | 'url' | 'description' | 'custom' | 'auth'
 >;
 
 export function loadServers(): StoredServer[] | null {
@@ -26,6 +26,7 @@ export function saveServers(servers: ServerEntry[]): void {
     url: s.url,
     description: s.description,
     custom: s.custom,
+    auth: s.auth,
   }));
   try {
     localStorage.setItem(KEY, JSON.stringify(stored));

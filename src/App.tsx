@@ -19,6 +19,7 @@ function loadInitial(): ServerEntry[] {
     name: s.name,
     url: s.url,
     description: s.description,
+    auth: s.auth,
     custom: true,
     status: 'disconnected' as const,
   }));
@@ -40,6 +41,8 @@ export default function App() {
   const [selectedToolName, setSelectedToolName] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** Bumps when the add/edit modal opens so the form remounts with fresh initial state (no reset-in-effect). */
+  const [dialogFormKey, setDialogFormKey] = useState(0);
 
   useEffect(() => {
     saveServers(servers);
@@ -69,7 +72,7 @@ export default function App() {
     if (!s) return;
     updateServer(id, { status: 'connecting', error: undefined });
     try {
-      const tools = await connect(id, s.url);
+      const tools = await connect(id, s.url, s.auth);
       updateServer(id, { status: 'connected', tools, error: undefined });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -89,11 +92,13 @@ export default function App() {
   }
 
   function handleAddClick() {
+    setDialogFormKey((k) => k + 1);
     setEditingId(null);
     setDialogMode('add');
   }
 
   function handleEditClick(id: string) {
+    setDialogFormKey((k) => k + 1);
     setEditingId(id);
     setDialogMode('edit');
   }
@@ -112,6 +117,7 @@ export default function App() {
         name: values.name,
         url: values.url,
         description: values.description,
+        auth: values.auth,
         custom: true,
         status: 'disconnected',
       };
@@ -130,12 +136,14 @@ export default function App() {
         return;
       }
       const urlChanged = target.url !== values.url;
+      const authChanged = JSON.stringify(target.auth) !== JSON.stringify(values.auth);
       updateServer(editingId, {
         name: values.name,
         url: values.url,
         description: values.description,
+        auth: values.auth,
       });
-      if (urlChanged && target.status === 'connected') {
+      if ((urlChanged || authChanged) && target.status === 'connected') {
         void disconnect(editingId).then(() => {
           updateServer(editingId, { status: 'disconnected', tools: undefined });
           void handleConnect(editingId);
@@ -175,6 +183,7 @@ export default function App() {
           name: editingServer.name,
           url: editingServer.url,
           description: editingServer.description,
+          auth: editingServer.auth,
         }
       : undefined;
 
@@ -230,6 +239,7 @@ export default function App() {
         <ToolDetail server={selectedServer} tool={selectedTool} />
       </div>
       <ServerFormDialog
+        key={dialogFormKey}
         open={dialogMode !== null}
         mode={dialogMode ?? 'add'}
         initialValues={dialogInitial}
