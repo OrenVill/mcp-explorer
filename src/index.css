@@ -52,6 +52,23 @@ input:focus, textarea:focus, select:focus, button:focus-visible {
   border-color: #a78bfa !important;
 }
 
+/* Shiki code blocks */
+.shiki-block pre.shiki {
+  margin: 0;
+  padding: 1rem;
+  background-color: transparent !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.shiki-block pre.shiki code {
+  background: transparent;
+  font-family: inherit;
+}
+
 /* Subtle radial backdrop */
 body::before {
   content: "";

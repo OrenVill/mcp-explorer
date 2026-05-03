@@ -1,4 +1,6 @@
 import type { ToolResult } from '../types';
+import { CodeBlock } from './CodeBlock';
+import { detectLanguage } from '../lib/highlighter';
 
 interface Props {
   result: ToolResult | null;
@@ -46,35 +48,33 @@ export function ResultPane({ result, error, loading }: Props) {
           tool reported error
         </div>
       )}
-      {result.content.map((c, i) => (
-        <div key={i} className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
-          <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
-            <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold">
-              {c.type}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                const text = c.text ?? JSON.stringify(c, null, 2);
-                navigator.clipboard?.writeText(text).catch(() => {});
-              }}
-              className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
-              title="Copy"
-            >
-              copy
-            </button>
+      {result.content.map((c, i) => {
+        const isText = c.type === 'text' && c.text !== undefined;
+        const raw = isText ? (c.text as string) : JSON.stringify(c, null, 2);
+        const lang = isText ? detectLanguage(raw) : 'json';
+        return (
+          <div key={i} className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+            <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+                {c.type}
+                <span className="text-zinc-700">·</span>
+                <span className="text-zinc-500/80 normal-case tracking-normal">{lang}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(raw).catch(() => {});
+                }}
+                className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+                title="Copy"
+              >
+                copy
+              </button>
+            </div>
+            <CodeBlock code={raw} lang={lang} />
           </div>
-          {c.type === 'text' && c.text !== undefined ? (
-            <pre className="text-sm text-zinc-100 whitespace-pre-wrap break-words p-4 leading-relaxed">
-              {c.text}
-            </pre>
-          ) : (
-            <pre className="text-xs text-zinc-300 whitespace-pre-wrap break-words p-4 font-mono">
-              {JSON.stringify(c, null, 2)}
-            </pre>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
