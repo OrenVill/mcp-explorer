@@ -1,6 +1,7 @@
-import { defineConfig, type PluginOption } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import type { PluginOption } from 'vite';
 import { handleMcpProxy, PROXY_PATH } from './proxy.js';
 
 function mcpProxyPlugin(): PluginOption {
@@ -17,4 +18,9 @@ function mcpProxyPlugin(): PluginOption {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), mcpProxyPlugin()],
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    passWithNoTests: true,
+  },
 });
