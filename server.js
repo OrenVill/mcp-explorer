@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, resolve, extname } from 'node:path';
 import { handleMcpProxy, PROXY_PATH } from './proxy.js';
+import { handleVaultStorage, isVaultStorageRequest } from './vault-file-handler.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const defaultRoot = resolve(here, 'dist');
@@ -70,6 +71,15 @@ export function start({
     const url = req.url ?? '/';
     if (url === PROXY_PATH || url.startsWith(PROXY_PATH + '?')) {
       handleMcpProxy(req, res);
+      return;
+    }
+    if (isVaultStorageRequest(url)) {
+      handleVaultStorage(req, res).catch((err) => {
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        }
+        res.end(err instanceof Error ? err.message : String(err));
+      });
       return;
     }
     let file = await resolveFile(url);

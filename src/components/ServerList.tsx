@@ -11,6 +11,26 @@ interface Props {
   onAddClick: () => void;
 }
 
+function ServerErrorMessage({ text }: { text: string }) {
+  const parts = text
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const headline = parts[0] ?? text;
+  const detail = parts.slice(1).join('\n\n');
+  return (
+    <div
+      className="mt-1.5 rounded-md bg-red-950/35 border border-red-900/55 px-2 py-1.5 max-h-36 overflow-y-auto"
+      role="alert"
+    >
+      <p className="text-xs text-red-300 font-medium leading-snug">⚠ {headline}</p>
+      {detail ? (
+        <p className="text-[11px] text-red-400/85 mt-1.5 leading-relaxed whitespace-pre-wrap">{detail}</p>
+      ) : null}
+    </div>
+  );
+}
+
 const STATUS_CONFIG: Record<ServerStatus, { dot: string; ring: string; label: string }> = {
   disconnected: { dot: 'bg-zinc-600', ring: '', label: 'disconnected' },
   connecting: { dot: 'bg-amber-400', ring: 'ring-2 ring-amber-400/30 animate-pulse', label: 'connecting…' },
@@ -126,11 +146,7 @@ export function ServerList({
                   {s.description}
                 </div>
               )}
-              {s.error && (
-                <div className="text-xs text-red-400/90 mt-1.5 truncate" title={s.error}>
-                  ⚠ {s.error}
-                </div>
-              )}
+              {s.error && <ServerErrorMessage text={s.error} />}
               <div className="mt-2 flex gap-1.5 items-center">
                 {s.status === 'connected' ? (
                   <button

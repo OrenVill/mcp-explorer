@@ -34,7 +34,8 @@ export function VaultSetup({ onCreate, migrationHint, error, busy }: Props) {
         <div>
           <h2 className="text-zinc-50 text-lg font-semibold tracking-tight">Create vault</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Set a passphrase to encrypt servers and credentials in this browser.
+            Set a passphrase to encrypt servers and credentials on this device. With the dev
+            server, the vault is an encrypted file; otherwise it stays in this browser.
           </p>
         </div>
 

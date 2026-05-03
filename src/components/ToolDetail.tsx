@@ -32,6 +32,8 @@ export function ToolDetail({ server, tool }: Props) {
 function ToolDetailSession({ server, tool }: Props) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<ToolResult | null>(null);
+  /** Bumps when a new tool result arrives so ResultPane remounts (formatted vs raw defaults to formatted). */
+  const [resultEpoch, setResultEpoch] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -60,6 +62,7 @@ function ToolDetailSession({ server, tool }: Props) {
     try {
       const r = await callTool(server.id, tool.name, cleanedArgs);
       setResult(r);
+      setResultEpoch((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -137,7 +140,7 @@ function ToolDetailSession({ server, tool }: Props) {
           <h2 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-zinc-400 mb-3">
             Result
           </h2>
-          <ResultPane result={result} error={error} loading={loading} />
+          <ResultPane key={resultEpoch} result={result} error={error} loading={loading} />
         </section>
       </div>
     </main>

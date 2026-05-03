@@ -12,6 +12,8 @@
     "public",
     "index.html",
     "server.js",
+    "vault-file-handler.js",
+    "vault-file-handler.d.ts",
     "proxy.js",
     "proxy.d.ts",
     "vite.config.ts",

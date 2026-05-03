@@ -9,7 +9,7 @@ import {
   fromB64,
   unlockKeyFromEnvelope,
 } from './crypto';
-import { deleteVaultRecord, getVaultEnvelope, putVaultEnvelope } from './idb';
+import { deleteVaultRecord, getVaultEnvelope, putVaultEnvelope } from './vaultPersistence';
 import type { VaultEnvelope } from './types';
 
 export type BootstrapPhase = 'needs-setup' | 'needs-unlock';

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ServerList } from './components/ServerList';
 import { ToolList } from './components/ToolList';
 import { ToolDetail } from './components/ToolDetail';
@@ -10,6 +10,7 @@ import {
   type ServerFormValues,
 } from './components/ServerFormDialog';
 import { Logo } from './components/Logo';
+import { formatConnectionError } from './lib/connectionErrorMessage';
 import { connect, disconnect } from './lib/mcpClient';
 import { loadLegacyServers, type StoredServer } from './lib/storage';
 import {
@@ -19,7 +20,7 @@ import {
   saveVault,
   unlockVault,
 } from './lib/vault/service';
-import type { ServerEntry } from './types';
+import type { ServerAuth, ServerEntry } from './types';
 
 type VaultPhase = 'loading' | 'needs-setup' | 'needs-unlock' | 'ready';
 
@@ -66,8 +67,15 @@ export default function App() {
   const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const aesKeyRef = useRef<CryptoKey | null>(null);
+  const serversRef = useRef<ServerEntry[]>(servers);
+  const vaultPhaseRef = useRef<VaultPhase>(vaultPhase);
   /** Bumps when the add/edit modal opens so the form remounts with fresh initial state (no reset-in-effect). */
   const [dialogFormKey, setDialogFormKey] = useState(0);
+
+  useLayoutEffect(() => {
+    serversRef.current = servers;
+    vaultPhaseRef.current = vaultPhase;
+  }, [servers, vaultPhase]);
 
   useEffect(() => {
     void (async () => {
@@ -89,6 +97,29 @@ export default function App() {
     });
   }, [servers, vaultPhase]);
 
+  /** Best-effort flush before tab close / crash so IndexedDB has the latest ciphertext (see Page Lifecycle). */
+  useEffect(() => {
+    function flushVaultToDisk() {
+      const phase = vaultPhaseRef.current;
+      const key = aesKeyRef.current;
+      if (phase !== 'ready' || !key) return;
+      void saveVault(key, toStoredServers(serversRef.current)).catch((err: unknown) => {
+        console.error('mcp-explorer: vault background save failed', err);
+      });
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') flushVaultToDisk();
+    }
+
+    window.addEventListener('pagehide', flushVaultToDisk);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', flushVaultToDisk);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
   const selectedServer = useMemo(
     () => servers.find((s) => s.id === selectedId) ?? null,
     [servers, selectedId],
@@ -108,16 +139,26 @@ export default function App() {
     setServers((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
 
-  async function handleConnect(id: string) {
+  /**
+   * When opening from Add/Edit, pass `connection` so connect runs with the submitted URL/auth
+   * even before React has committed the new/updated server row (avoids a stale `servers.find`).
+   */
+  async function handleConnect(
+    id: string,
+    connection?: { url: string; auth?: ServerAuth },
+  ) {
     const s = servers.find((x) => x.id === id);
-    if (!s) return;
+    const url = connection?.url ?? s?.url;
+    const auth = connection !== undefined ? connection.auth : s?.auth;
+    if (!url) return;
+    setSelectedId(id);
+    setSelectedToolName(null);
     updateServer(id, { status: 'connecting', error: undefined });
     try {
-      const tools = await connect(id, s.url, s.auth);
+      const tools = await connect(id, url, auth);
       updateServer(id, { status: 'connected', tools, error: undefined });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      updateServer(id, { status: 'error', error: msg });
+      updateServer(id, { status: 'error', error: formatConnectionError(e) });
     }
   }
 
@@ -163,10 +204,8 @@ export default function App() {
         status: 'disconnected',
       };
       setServers((prev) => [...prev, entry]);
-      setSelectedId(id);
-      setSelectedToolName(null);
       handleDialogClose();
-      void handleConnect(id);
+      void handleConnect(id, { url: values.url, auth: values.auth });
       return;
     }
 
@@ -176,21 +215,14 @@ export default function App() {
         handleDialogClose();
         return;
       }
-      const urlChanged = target.url !== values.url;
-      const authChanged = JSON.stringify(target.auth) !== JSON.stringify(values.auth);
       updateServer(editingId, {
         name: values.name,
         url: values.url,
         description: values.description,
         auth: values.auth,
       });
-      if ((urlChanged || authChanged) && target.status === 'connected') {
-        void disconnect(editingId).then(() => {
-          updateServer(editingId, { status: 'disconnected', tools: undefined });
-          void handleConnect(editingId);
-        });
-      }
       handleDialogClose();
+      void handleConnect(editingId, { url: values.url, auth: values.auth });
     }
   }
 

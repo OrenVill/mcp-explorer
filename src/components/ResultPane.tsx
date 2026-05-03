@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ToolResult } from '../types';
 import { CodeBlock } from './CodeBlock';
 import { detectLanguage } from '../lib/highlighter';
@@ -8,7 +9,33 @@ interface Props {
   loading: boolean;
 }
 
+type ResultView = 'formatted' | 'raw';
+
+function RawResultBlock({ result }: { result: ToolResult }) {
+  const raw = JSON.stringify(result, null, 2);
+  return (
+    <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+      <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold">
+          Full ToolResult (JSON)
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard?.writeText(raw);
+          }}
+          className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          copy
+        </button>
+      </div>
+      <CodeBlock code={raw} lang="json" />
+    </div>
+  );
+}
+
 export function ResultPane({ result, error, loading }: Props) {
+  const [view, setView] = useState<ResultView>('formatted');
   if (loading) {
     return (
       <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-5 text-sm text-amber-400/90 flex items-center gap-2">
@@ -42,39 +69,81 @@ export function ResultPane({ result, error, loading }: Props) {
 
   return (
     <div className="space-y-3">
-      {result.isError && (
-        <div className="text-[11px] px-2.5 py-1 inline-flex items-center gap-1.5 rounded-md bg-red-950/40 text-red-300 border border-red-900/60">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-          tool reported error
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[11px] text-zinc-500">Response</span>
+        <div
+          className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900/70 p-0.5"
+          role="tablist"
+          aria-label="Result view"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'formatted'}
+            onClick={() => setView('formatted')}
+            className={
+              view === 'formatted'
+                ? 'px-3 py-1 rounded-md text-[11px] font-medium bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'px-3 py-1 rounded-md text-[11px] font-medium text-zinc-500 hover:text-zinc-300'
+            }
+          >
+            Formatted
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'raw'}
+            onClick={() => setView('raw')}
+            className={
+              view === 'raw'
+                ? 'px-3 py-1 rounded-md text-[11px] font-medium bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'px-3 py-1 rounded-md text-[11px] font-medium text-zinc-500 hover:text-zinc-300'
+            }
+          >
+            Raw
+          </button>
         </div>
-      )}
-      {result.content.map((c, i) => {
-        const isText = c.type === 'text' && c.text !== undefined;
-        const raw = isText ? (c.text as string) : JSON.stringify(c, null, 2);
-        const lang = isText ? detectLanguage(raw) : 'json';
-        return (
-          <div key={i} className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
-            <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
-              <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
-                {c.type}
-                <span className="text-zinc-700">·</span>
-                <span className="text-zinc-500/80 normal-case tracking-normal">{lang}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText(raw).catch(() => {});
-                }}
-                className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
-                title="Copy"
-              >
-                copy
-              </button>
+      </div>
+
+      {view === 'raw' ? (
+        <RawResultBlock result={result} />
+      ) : (
+        <>
+          {result.isError && (
+            <div className="text-[11px] px-2.5 py-1 inline-flex items-center gap-1.5 rounded-md bg-red-950/40 text-red-300 border border-red-900/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              tool reported error
             </div>
-            <CodeBlock code={raw} lang={lang} />
-          </div>
-        );
-      })}
+          )}
+          {result.content.map((c, i) => {
+            const isText = c.type === 'text' && c.text !== undefined;
+            const raw = isText ? (c.text as string) : JSON.stringify(c, null, 2);
+            const lang = isText ? detectLanguage(raw) : 'json';
+            return (
+              <div key={i} className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+                <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+                    {c.type}
+                    <span className="text-zinc-700">·</span>
+                    <span className="text-zinc-500/80 normal-case tracking-normal">{lang}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(raw).catch(() => {});
+                    }}
+                    className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+                    title="Copy"
+                  >
+                    copy
+                  </button>
+                </div>
+                <CodeBlock code={raw} lang={lang} />
+              </div>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
