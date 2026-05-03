@@ -1,15 +1,16 @@
 import type { ServerEntry } from '../types';
+import { LEGACY_SERVERS_STORAGE_KEY } from './vault/constants';
 
-const KEY = 'mcp-explorer.servers.v1';
-
-type StoredServer = Pick<
+export type StoredServer = Pick<
   ServerEntry,
   'id' | 'name' | 'url' | 'description' | 'custom' | 'auth'
 >;
 
-export function loadServers(): StoredServer[] | null {
+export { LEGACY_SERVERS_STORAGE_KEY };
+
+export function loadLegacyServers(): StoredServer[] | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(LEGACY_SERVERS_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
@@ -19,18 +20,10 @@ export function loadServers(): StoredServer[] | null {
   }
 }
 
-export function saveServers(servers: ServerEntry[]): void {
-  const stored: StoredServer[] = servers.map((s) => ({
-    id: s.id,
-    name: s.name,
-    url: s.url,
-    description: s.description,
-    custom: s.custom,
-    auth: s.auth,
-  }));
+export function clearLegacyServers(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(stored));
+    localStorage.removeItem(LEGACY_SERVERS_STORAGE_KEY);
   } catch {
-    /* quota or disabled — ignore */
+    /* ignore */
   }
 }

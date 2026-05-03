@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { JsonSchema, JsonSchemaProperty } from '../types';
 
 interface Props {
@@ -28,16 +28,12 @@ function JsonTextarea({ value, placeholder, className, onChange }: JsonTextareaP
   const [raw, setRaw] = useState(() =>
     value === undefined ? '' : JSON.stringify(value, null, 2)
   );
-
-  // Resync when parent clears the field (e.g. tool/server change resets values to {}).
-  useEffect(() => {
-    if (value === undefined) setRaw('');
-  }, [value]);
+  const displayValue = value === undefined ? '' : raw;
 
   return (
     <textarea
       rows={4}
-      value={raw}
+      value={displayValue}
       placeholder={placeholder}
       className={className}
       onChange={(e) => {

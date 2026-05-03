@@ -1,27 +1,48 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ServerList } from './components/ServerList';
 import { ToolList } from './components/ToolList';
 import { ToolDetail } from './components/ToolDetail';
+import { VaultLockButton } from './components/VaultLockButton';
+import { VaultSetup } from './components/VaultSetup';
+import { VaultUnlock } from './components/VaultUnlock';
 import {
   ServerFormDialog,
   type ServerFormValues,
 } from './components/ServerFormDialog';
 import { Logo } from './components/Logo';
 import { connect, disconnect } from './lib/mcpClient';
-import { loadServers, saveServers } from './lib/storage';
+import { loadLegacyServers, type StoredServer } from './lib/storage';
+import {
+  createVault,
+  getBootstrapPhase,
+  resetVault,
+  saveVault,
+  unlockVault,
+} from './lib/vault/service';
 import type { ServerEntry } from './types';
 
-function loadInitial(): ServerEntry[] {
-  const stored = loadServers();
-  if (!stored) return [];
+type VaultPhase = 'loading' | 'needs-setup' | 'needs-unlock' | 'ready';
+
+function fromStoredServers(stored: StoredServer[]): ServerEntry[] {
   return stored.map((s) => ({
     id: s.id,
     name: s.name,
     url: s.url,
     description: s.description,
     auth: s.auth,
-    custom: true,
-    status: 'disconnected' as const,
+    custom: s.custom ?? true,
+    status: 'disconnected',
+  }));
+}
+
+function toStoredServers(servers: ServerEntry[]): StoredServer[] {
+  return servers.map((server) => ({
+    id: server.id,
+    name: server.name,
+    url: server.url,
+    description: server.description,
+    custom: server.custom,
+    auth: server.auth,
   }));
 }
 
@@ -36,17 +57,37 @@ function makeId(name: string, existing: Set<string>): string {
 }
 
 export default function App() {
-  const [servers, setServers] = useState<ServerEntry[]>(() => loadInitial());
+  const [vaultPhase, setVaultPhase] = useState<VaultPhase>('loading');
+  const [vaultError, setVaultError] = useState<string | null>(null);
+  const [vaultBusy, setVaultBusy] = useState(false);
+  const [servers, setServers] = useState<ServerEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedToolName, setSelectedToolName] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const aesKeyRef = useRef<CryptoKey | null>(null);
   /** Bumps when the add/edit modal opens so the form remounts with fresh initial state (no reset-in-effect). */
   const [dialogFormKey, setDialogFormKey] = useState(0);
 
   useEffect(() => {
-    saveServers(servers);
-  }, [servers]);
+    void (async () => {
+      try {
+        const phase = await getBootstrapPhase();
+        setVaultPhase(phase);
+      } catch {
+        setVaultError('Could not initialize vault.');
+        setVaultPhase('needs-setup');
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (vaultPhase !== 'ready' || !aesKeyRef.current) return;
+    void saveVault(aesKeyRef.current, toStoredServers(servers)).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      setVaultError(`Vault save failed: ${message}`);
+    });
+  }, [servers, vaultPhase]);
 
   const selectedServer = useMemo(
     () => servers.find((s) => s.id === selectedId) ?? null,
@@ -189,6 +230,108 @@ export default function App() {
 
   const connectedCount = servers.filter((s) => s.status === 'connected').length;
 
+  async function handleVaultCreate(passphrase: string) {
+    setVaultBusy(true);
+    setVaultError(null);
+    try {
+      const legacyServers = loadLegacyServers() ?? [];
+      const aesKey = await createVault(passphrase, legacyServers);
+      aesKeyRef.current = aesKey;
+      setServers(fromStoredServers(legacyServers));
+      setVaultPhase('ready');
+    } catch (err) {
+      setVaultError(err instanceof Error ? err.message : 'Could not create vault.');
+    } finally {
+      setVaultBusy(false);
+    }
+  }
+
+  async function handleVaultUnlock(passphrase: string) {
+    setVaultBusy(true);
+    setVaultError(null);
+    try {
+      const { aesKey, servers: storedServers } = await unlockVault(passphrase);
+      aesKeyRef.current = aesKey;
+      setServers(fromStoredServers(storedServers));
+      setVaultPhase('ready');
+    } catch (err) {
+      setVaultError(err instanceof Error ? err.message : 'Could not unlock vault.');
+    } finally {
+      setVaultBusy(false);
+    }
+  }
+
+  function handleVaultLock() {
+    const snapshot = servers;
+    setVaultPhase('needs-unlock');
+    setVaultError(null);
+    setSelectedId(null);
+    setSelectedToolName(null);
+    void Promise.allSettled(
+      snapshot
+        .filter((server) => server.status === 'connected')
+        .map((server) => disconnect(server.id)),
+    ).finally(() => {
+      aesKeyRef.current = null;
+      setServers([]);
+    });
+  }
+
+  async function handleVaultReset() {
+    if (!window.confirm('Reset vault? This will permanently remove all stored servers and credentials.')) {
+      return;
+    }
+    setVaultBusy(true);
+    try {
+      await resetVault();
+      aesKeyRef.current = null;
+      setServers([]);
+      setSelectedId(null);
+      setSelectedToolName(null);
+      setVaultError(null);
+      setVaultPhase('needs-setup');
+    } catch (err) {
+      setVaultError(err instanceof Error ? err.message : 'Could not reset vault.');
+    } finally {
+      setVaultBusy(false);
+    }
+  }
+
+  if (vaultPhase === 'loading') {
+    return (
+      <div className="h-full flex items-center justify-center bg-zinc-950 text-zinc-300">
+        Loading...
+      </div>
+    );
+  }
+
+  if (vaultPhase === 'needs-setup') {
+    return (
+      <VaultSetup
+        onCreate={handleVaultCreate}
+        migrationHint={Boolean(loadLegacyServers()?.length)}
+        error={vaultError}
+        busy={vaultBusy}
+      />
+    );
+  }
+
+  if (vaultPhase === 'needs-unlock') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-zinc-950 px-4">
+        <VaultUnlock onUnlock={handleVaultUnlock} error={vaultError} busy={vaultBusy} />
+        <button
+          type="button"
+          onClick={() => void handleVaultReset()}
+          disabled={vaultBusy}
+          className="mt-4 text-xs px-3 py-1.5 rounded-md border border-zinc-700 text-zinc-300 hover:text-red-300 hover:border-red-800 hover:bg-red-950/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Reset vault
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-zinc-950">
       <header className="border-b border-zinc-800/80 px-5 py-3 flex items-center justify-between bg-zinc-950/80 backdrop-blur">
@@ -207,18 +350,26 @@ export default function App() {
               {connectedCount}/{servers.length} connected
             </span>
           )}
+          {vaultError && (
+            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-950/50 border border-red-900/60 text-red-300">
+              {vaultError}
+            </span>
+          )}
         </div>
-        <a
-          href="https://github.com/OrenVill/mcp-explorer"
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors flex items-center gap-1.5"
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden>
-            <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-          </svg>
-          GitHub
-        </a>
+        <div className="flex items-center gap-2">
+          <VaultLockButton onLock={handleVaultLock} />
+          <a
+            href="https://github.com/OrenVill/mcp-explorer"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors flex items-center gap-1.5"
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden>
+              <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+            </svg>
+            GitHub
+          </a>
+        </div>
       </header>
       <div className="flex-1 flex min-h-0">
         <ServerList

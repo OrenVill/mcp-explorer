@@ -14,7 +14,6 @@ export function CodeBlock({ code, lang, className }: Props) {
   useEffect(() => {
     let cancelled = false;
     if (resolvedLang === 'text') {
-      setHtml(null);
       return;
     }
     getHighlighter()

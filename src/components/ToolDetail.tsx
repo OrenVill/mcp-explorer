@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SchemaForm } from './SchemaForm';
 import { ResultPane } from './ResultPane';
 import { callTool } from '../lib/mcpClient';
@@ -25,16 +25,15 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export function ToolDetail({ server, tool }: Props) {
+  const sessionKey = `${server?.id ?? 'none'}:${tool?.name ?? 'none'}`;
+  return <ToolDetailSession key={sessionKey} server={server} tool={tool} />;
+}
+
+function ToolDetailSession({ server, tool }: Props) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<ToolResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setValues({});
-    setResult(null);
-    setError(null);
-  }, [server?.id, tool?.name]);
 
   if (!server) {
     return <EmptyState>Select a server from the left to begin.</EmptyState>;

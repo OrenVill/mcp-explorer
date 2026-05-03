@@ -68,7 +68,7 @@ export async function encryptUtf8(
 export async function decryptUtf8(
   aesKey: CryptoKey,
   iv: Uint8Array,
-  ciphertext: ArrayBuffer,
+  ciphertext: BufferSource,
 ): Promise<string> {
   const buf = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: new Uint8Array(iv) },
