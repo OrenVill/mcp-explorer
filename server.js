@@ -4,6 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, resolve, extname } from 'node:path';
+import { handleMcpProxy, PROXY_PATH } from './proxy.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const defaultRoot = resolve(here, 'dist');
@@ -67,6 +68,10 @@ export function start({
 
   const server = createServer(async (req, res) => {
     const url = req.url ?? '/';
+    if (url === PROXY_PATH || url.startsWith(PROXY_PATH + '?')) {
+      handleMcpProxy(req, res);
+      return;
+    }
     let file = await resolveFile(url);
 
     // SPA fallback: serve index.html for unknown non-asset routes.

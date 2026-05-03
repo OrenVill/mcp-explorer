@@ -5,10 +5,17 @@ import type { ToolDef, ToolResult } from '../types';
 const clients = new Map<string, Client>();
 const transports = new Map<string, StreamableHTTPClientTransport>();
 
+function proxiedUrl(target: string): URL {
+  // Always route through the local same-origin proxy so localhost MCP servers
+  // without CORS headers (and any cross-origin server) work in the browser.
+  const base = window.location.origin;
+  return new URL(`/__mcp_proxy?target=${encodeURIComponent(target)}`, base);
+}
+
 export async function connect(serverId: string, url: string): Promise<ToolDef[]> {
   await disconnect(serverId);
 
-  const transport = new StreamableHTTPClientTransport(new URL(url));
+  const transport = new StreamableHTTPClientTransport(proxiedUrl(url));
   const client = new Client(
     { name: 'mcp-explorer', version: '0.1.0' },
     { capabilities: {} },

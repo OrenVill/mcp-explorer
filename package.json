@@ -12,6 +12,8 @@
     "public",
     "index.html",
     "server.js",
+    "proxy.js",
+    "proxy.d.ts",
     "vite.config.ts",
     "tsconfig.json",
     "tsconfig.app.json",
