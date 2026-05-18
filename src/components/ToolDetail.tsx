@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { SchemaForm } from './SchemaForm';
 import { ResultPane } from './ResultPane';
+import { DiscoveryHeader } from './DiscoveryHeader';
+import { invokeMaybeDiscovered } from '../lib/discovery/invoke';
 import { callTool } from '../lib/mcpClient';
-import type { ServerEntry, ToolDef, ToolResult } from '../types';
+import type { DiscoveryRun, MetaToolBinding, ServerEntry, ToolDef, ToolResult } from '../types';
 
 interface Props {
   server: ServerEntry | null;
   tool: ToolDef | null;
+  metaBinding: MetaToolBinding | null;
+  discoveryRun: DiscoveryRun | null;
+  onDiscover: (metaToolName: string, opts?: { alphabetSweep?: boolean }) => void;
+  onStop: (metaToolName: string) => void;
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
@@ -24,12 +30,22 @@ function EmptyState({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ToolDetail({ server, tool }: Props) {
+export function ToolDetail({ server, tool, metaBinding, discoveryRun, onDiscover, onStop }: Props) {
   const sessionKey = `${server?.id ?? 'none'}:${tool?.name ?? 'none'}`;
-  return <ToolDetailSession key={sessionKey} server={server} tool={tool} />;
+  return (
+    <ToolDetailSession
+      key={sessionKey}
+      server={server}
+      tool={tool}
+      metaBinding={metaBinding}
+      discoveryRun={discoveryRun}
+      onDiscover={onDiscover}
+      onStop={onStop}
+    />
+  );
 }
 
-function ToolDetailSession({ server, tool }: Props) {
+function ToolDetailSession({ server, tool, metaBinding, discoveryRun, onDiscover, onStop }: Props) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<ToolResult | null>(null);
   /** Bumps when a new tool result arrives so ResultPane remounts (formatted vs raw defaults to formatted). */
@@ -60,7 +76,12 @@ function ToolDetailSession({ server, tool }: Props) {
     setError(null);
     setResult(null);
     try {
-      const r = await callTool(server.id, tool.name, cleanedArgs);
+      const r = await invokeMaybeDiscovered({
+        callTool: (n, a) => callTool(server.id, n, a),
+        tool,
+        args: cleanedArgs,
+        metaTools: server.metaTools ?? [],
+      });
       setResult(r);
       setResultEpoch((n) => n + 1);
     } catch (e) {
@@ -74,7 +95,15 @@ function ToolDetailSession({ server, tool }: Props) {
 
   return (
     <main className="flex-1 overflow-y-auto bg-zinc-950">
-      <div className="max-w-3xl mx-auto px-8 py-8 space-y-8">
+      <div className="max-w-3xl mx-auto px-8 py-8 space-y-6">
+        {metaBinding && discoveryRun && (
+          <DiscoveryHeader
+            meta={metaBinding}
+            run={discoveryRun}
+            onDiscover={(opts) => onDiscover(metaBinding.toolName, opts)}
+            onStop={() => onStop(metaBinding.toolName)}
+          />
+        )}
         <header className="space-y-2">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-zinc-500">{server.name}</span>

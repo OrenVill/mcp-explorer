@@ -5,7 +5,7 @@ import { paginatedListStrategy } from './paginatedList';
 import type { DiscoveryContext } from '../strategy';
 import type { JsonSchema, ToolResult } from '../../../types';
 
-function ctx(callTool: DiscoveryContext['callTool'], _schema: JsonSchema): DiscoveryContext {
+function ctx(callTool: DiscoveryContext['callTool']): DiscoveryContext {
   return {
     serverId: 's',
     metaTool: { toolName: 'list_tools', kind: 'paginated_list', confidence: 0.9 },
@@ -39,7 +39,7 @@ describe('paginatedListStrategy', () => {
     ];
     const callTool = vi.fn(async () => responses.shift()!);
     const schema: JsonSchema = { type: 'object', properties: { cursor: { type: 'string' } } };
-    const c = ctx(callTool, schema);
+    const c = ctx(callTool);
     c.metaTool = { ...c.metaTool };
     (c.metaTool as unknown as { inputSchema: JsonSchema }).inputSchema = schema;
     const out = await collect(paginatedListStrategy.run(c));
@@ -53,7 +53,7 @@ describe('paginatedListStrategy', () => {
   test('stops at maxCalls', async () => {
     const callTool = vi.fn(async () => text({ tools: [{ name: 'x' }], nextCursor: 'next' }));
     const schema: JsonSchema = { type: 'object', properties: { cursor: { type: 'string' } } };
-    const c = ctx(callTool, schema);
+    const c = ctx(callTool);
     (c.metaTool as unknown as { inputSchema: JsonSchema }).inputSchema = schema;
     c.limits = { ...c.limits, maxCalls: 3 };
     await collect(paginatedListStrategy.run(c));
@@ -67,7 +67,7 @@ describe('paginatedListStrategy', () => {
     ];
     const callTool = vi.fn(async () => responses.shift()!);
     const schema: JsonSchema = { type: 'object', properties: { page: { type: 'number' } } };
-    const c = ctx(callTool, schema);
+    const c = ctx(callTool);
     (c.metaTool as unknown as { inputSchema: JsonSchema }).inputSchema = schema;
     const out = await collect(paginatedListStrategy.run(c));
     expect(out.map((t) => t.name)).toEqual(['a', 'b']);

@@ -11,7 +11,9 @@ import {
 } from './components/ServerFormDialog';
 import { Logo } from './components/Logo';
 import { formatConnectionError } from './lib/connectionErrorMessage';
-import { connect, disconnect } from './lib/mcpClient';
+import { connect, disconnect, callTool as mcpCallTool, onToolsChanged, refetchTools } from './lib/mcpClient';
+import { detectMetaTools } from './lib/discovery/detect';
+import { runDiscovery } from './lib/discovery/orchestrator';
 import { loadLegacyServers, type StoredServer } from './lib/storage';
 import {
   createVault,
@@ -20,7 +22,7 @@ import {
   saveVault,
   unlockVault,
 } from './lib/vault/service';
-import type { ServerAuth, ServerEntry } from './types';
+import type { DiscoveryRun, MetaToolBinding, ServerAuth, ServerEntry } from './types';
 
 type VaultPhase = 'loading' | 'needs-setup' | 'needs-unlock' | 'ready';
 
@@ -69,6 +71,7 @@ export default function App() {
   const aesKeyRef = useRef<CryptoKey | null>(null);
   const serversRef = useRef<ServerEntry[]>(servers);
   const vaultPhaseRef = useRef<VaultPhase>(vaultPhase);
+  const discoveryControllersRef = useRef<Map<string, AbortController>>(new Map());
   /** Bumps when the add/edit modal opens so the form remounts with fresh initial state (no reset-in-effect). */
   const [dialogFormKey, setDialogFormKey] = useState(0);
 
@@ -127,7 +130,19 @@ export default function App() {
 
   const selectedTool = useMemo(() => {
     if (!selectedServer || !selectedToolName) return null;
-    return selectedServer.tools?.find((t) => t.name === selectedToolName) ?? null;
+    const native = selectedServer.tools?.find((t) => t.name === selectedToolName);
+    if (native) return native;
+    return selectedServer.discovered?.find((t) => t.name === selectedToolName) ?? null;
+  }, [selectedServer, selectedToolName]);
+
+  const selectedMeta = useMemo(() => {
+    if (!selectedServer || !selectedToolName) return null;
+    return selectedServer.metaTools?.find((m) => m.toolName === selectedToolName) ?? null;
+  }, [selectedServer, selectedToolName]);
+
+  const selectedRun = useMemo<DiscoveryRun>(() => {
+    const existing = selectedServer && selectedToolName ? selectedServer.discoveryRuns?.[selectedToolName] : undefined;
+    return existing ?? { status: 'idle', probesAttempted: 0, callsMade: 0, toolsFound: 0 };
   }, [selectedServer, selectedToolName]);
 
   const editingServer = useMemo(
@@ -156,7 +171,21 @@ export default function App() {
     updateServer(id, { status: 'connecting', error: undefined });
     try {
       const tools = await connect(id, url, auth);
-      updateServer(id, { status: 'connected', tools, error: undefined });
+      const metaTools = detectMetaTools(tools);
+      updateServer(id, {
+        status: 'connected',
+        tools,
+        metaTools,
+        discovered: undefined,
+        discoveryRuns: {},
+        error: undefined,
+      });
+      onToolsChanged(id, () => {
+        void refetchTools(id).then((next) => {
+          const nextMeta = detectMetaTools(next);
+          updateServer(id, { tools: next, metaTools: nextMeta });
+        });
+      });
     } catch (e) {
       updateServer(id, { status: 'error', error: formatConnectionError(e) });
     }
@@ -164,8 +193,94 @@ export default function App() {
 
   async function handleDisconnect(id: string) {
     await disconnect(id);
-    updateServer(id, { status: 'disconnected', tools: undefined });
+    updateServer(id, {
+      status: 'disconnected',
+      tools: undefined,
+      metaTools: undefined,
+      discovered: undefined,
+      discoveryRuns: undefined,
+    });
     if (selectedId === id) setSelectedToolName(null);
+  }
+
+  async function handleDiscover(
+    serverId: string,
+    metaToolName: string,
+    opts?: { alphabetSweep?: boolean },
+  ) {
+    const server = serversRef.current.find((s) => s.id === serverId);
+    if (!server) return;
+    const meta = server.metaTools?.find((m) => m.toolName === metaToolName);
+    if (!meta) return;
+
+    const key = `${serverId}:${metaToolName}`;
+    discoveryControllersRef.current.get(key)?.abort();
+    const controller = new AbortController();
+    discoveryControllersRef.current.set(key, controller);
+
+    const runningRun: DiscoveryRun = {
+      status: 'running',
+      startedAt: Date.now(),
+      probesAttempted: 0,
+      callsMade: 0,
+      toolsFound: 0,
+    };
+    updateServer(serverId, {
+      discoveryRuns: { ...(server.discoveryRuns ?? {}), [metaToolName]: runningRun },
+    });
+
+    const fullMeta: MetaToolBinding = {
+      ...meta,
+      inputSchema: server.tools?.find((t) => t.name === meta.toolName)?.inputSchema,
+    };
+    const allWithSchema: MetaToolBinding[] = (server.metaTools ?? []).map((m) => ({
+      ...m,
+      inputSchema: server.tools?.find((t) => t.name === m.toolName)?.inputSchema,
+    }));
+
+    const result = await runDiscovery({
+      serverId,
+      metaTool: fullMeta,
+      allMetaTools: allWithSchema,
+      callTool: (n, a) => mcpCallTool(serverId, n, a),
+      onProbe: (event) => {
+        const current = serversRef.current.find((s) => s.id === serverId);
+        const prevRun = current?.discoveryRuns?.[metaToolName];
+        if (!prevRun) return;
+        updateServer(serverId, {
+          discoveryRuns: {
+            ...(current?.discoveryRuns ?? {}),
+            [metaToolName]: {
+              ...prevRun,
+              callsMade: event.callsMade,
+              toolsFound: event.totalToolsSoFar,
+              probesAttempted: prevRun.probesAttempted + 1,
+            },
+          },
+        });
+      },
+      signal: controller.signal,
+      options: opts,
+    });
+
+    const latest = serversRef.current.find((s) => s.id === serverId);
+    if (!latest) return;
+    const existing = latest.discovered ?? [];
+    const byName = new Map(existing.map((t) => [t.name, t]));
+    for (const t of result.tools) if (!byName.has(t.name)) byName.set(t.name, t);
+    updateServer(serverId, {
+      discovered: Array.from(byName.values()),
+      discoveryRuns: {
+        ...(latest.discoveryRuns ?? {}),
+        [metaToolName]: result.run,
+      },
+    });
+    discoveryControllersRef.current.delete(key);
+  }
+
+  function handleDiscoveryStop(serverId: string, metaToolName: string) {
+    const key = `${serverId}:${metaToolName}`;
+    discoveryControllersRef.current.get(key)?.abort();
   }
 
   function handleSelect(id: string) {
@@ -419,7 +534,18 @@ export default function App() {
           selectedToolName={selectedToolName}
           onSelect={setSelectedToolName}
         />
-        <ToolDetail server={selectedServer} tool={selectedTool} />
+        <ToolDetail
+          server={selectedServer}
+          tool={selectedTool}
+          metaBinding={selectedMeta}
+          discoveryRun={selectedRun}
+          onDiscover={(metaToolName, opts) => {
+            if (selectedServer) void handleDiscover(selectedServer.id, metaToolName, opts);
+          }}
+          onStop={(metaToolName) => {
+            if (selectedServer) handleDiscoveryStop(selectedServer.id, metaToolName);
+          }}
+        />
       </div>
       <ServerFormDialog
         key={dialogFormKey}

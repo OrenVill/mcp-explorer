@@ -1,4 +1,5 @@
 import type { ServerEntry, ToolDef } from '../types';
+import { DiscoveredToolsSection } from './DiscoveredToolsSection';
 
 interface Props {
   server: ServerEntry | null;
@@ -69,6 +70,12 @@ export function ToolList({ server, selectedToolName, onSelect }: Props) {
             </li>
           );
         })}
+        <DiscoveredToolsSection
+          tools={server.discovered ?? []}
+          nativeNames={new Set(tools.map((t) => t.name))}
+          selectedToolName={selectedToolName}
+          onSelect={onSelect}
+        />
       </ul>
     </aside>
   );
