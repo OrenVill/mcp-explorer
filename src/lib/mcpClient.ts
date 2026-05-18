@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { ServerAuth, ToolDef, ToolResult } from '../types';
 
 const clients = new Map<string, Client>();
@@ -115,4 +116,30 @@ export async function callTool(
 
 export function isConnected(serverId: string): boolean {
   return clients.has(serverId);
+}
+
+/**
+ * Re-fetch the tool list for an already-connected server.
+ * Returns an empty array if the server is disconnected.
+ */
+export async function refetchTools(serverId: string): Promise<ToolDef[]> {
+  const client = clients.get(serverId);
+  if (!client) return [];
+  const list = await client.listTools();
+  return list.tools as unknown as ToolDef[];
+}
+
+/**
+ * Subscribe to `notifications/tools/list_changed` for a connected server.
+ * Returns an unsubscribe function. No-op if disconnected.
+ */
+export function onToolsChanged(serverId: string, handler: () => void): () => void {
+  const client = clients.get(serverId);
+  if (!client) return () => {};
+  client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
+    handler();
+  });
+  return () => {
+    client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {});
+  };
 }
