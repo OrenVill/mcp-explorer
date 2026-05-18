@@ -25,6 +25,11 @@ export interface ServerEntry {
   error?: string;
   tools?: ToolDef[];
   custom?: boolean;
+  metaTools?: MetaToolBinding[];
+  /** Discovered tools, in-memory, reset on reconnect. */
+  discovered?: DiscoveredTool[];
+  /** Per-meta-tool discovery run state, keyed by meta-tool name. */
+  discoveryRuns?: Record<string, DiscoveryRun>;
 }
 
 export interface ToolDef {
@@ -60,4 +65,53 @@ export interface ToolContent {
 export interface ToolResult {
   content: ToolContent[];
   isError?: boolean;
+}
+
+// --- Meta-tool discovery ---
+
+export type MetaToolKind =
+  | 'bulk_list'
+  | 'paginated_list'
+  | 'search'
+  | 'hybrid_index'
+  | 'hybrid_describe'
+  | 'category_index'
+  | 'category_list'
+  | 'enable_capability'
+  | 'proxy_invoke'
+  | 'manifest';
+
+export interface MetaToolBinding {
+  toolName: string;
+  kind: MetaToolKind;
+  confidence: number;
+  /** Name of a paired meta-tool, e.g. hybrid_index ↔ hybrid_describe, category_index ↔ category_list. */
+  pairedWith?: string;
+  /** Cached input schema for strategies that need to inspect param shapes (paginated_list, search, enable_capability). */
+  inputSchema?: JsonSchema;
+  /** For proxy_invoke: which input field carries the inner tool's args. */
+  proxyArgKey?: string;
+  /** For proxy_invoke: which input field carries the inner tool's name. */
+  proxyNameKey?: string;
+}
+
+export interface DiscoveredTool extends ToolDef {
+  source: {
+    via: string;
+    kind: MetaToolKind;
+    proxyArgKey?: string;
+    proxyNameKey?: string;
+  };
+}
+
+export type DiscoveryStatus = 'idle' | 'running' | 'done' | 'partial' | 'error';
+
+export interface DiscoveryRun {
+  status: DiscoveryStatus;
+  startedAt?: number;
+  finishedAt?: number;
+  probesAttempted: number;
+  callsMade: number;
+  toolsFound: number;
+  error?: string;
 }
