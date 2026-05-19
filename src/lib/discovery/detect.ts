@@ -1,17 +1,22 @@
 import type { JsonSchema, MetaToolBinding, MetaToolKind, ToolDef } from '../../types';
 
-const NOUN = '(tool|tools|action|actions|function|functions|capability|capabilities|skill|skills)';
+// Allow `_` or `-` between verb and noun (real-world MCP servers use both).
+const SEP = '[_-]';
+// Aggregator-ecosystem nouns. Kept narrow on purpose — content nouns like "library/model/dataset"
+// are excluded because those servers search content, not invocable tools, and our parser expects tool defs.
+const NOUN = '(tool|tools|action|actions|function|functions|capability|capabilities|skill|skills|actor|actors|server|servers|agent|agents|mcp|mcps)';
 
 const NAME_PATTERNS: Array<[RegExp, MetaToolKind]> = [
-  [new RegExp(`^(list|browse|index|get_all)_${NOUN}$`), 'bulk_list'],
-  [new RegExp(`^(search|find|query)_${NOUN}$`), 'search'],
-  [/^describe_(tool|action|function)$/, 'hybrid_describe'],
-  [/^get_tool(_info|_schema)?$/, 'hybrid_describe'],
-  [/^(invoke|call|run|use|execute)_(tool|action|function)$/, 'proxy_invoke'],
-  [/^(list|get)_(category|categories|namespace|namespaces)$/, 'category_index'],
-  [/^(list_tools_in|tools_in)_.+$/, 'category_list'],
-  [/^enable_(capability|tool|feature)$/, 'enable_capability'],
-  [/^(get|export)_(manifest|openapi|schema|catalog)$/, 'manifest'],
+  [new RegExp(`^(list|browse|index|get_all)${SEP}${NOUN}$`), 'bulk_list'],
+  [new RegExp(`^(search|find|query)${SEP}${NOUN}$`), 'search'],
+  [new RegExp(`^describe${SEP}(tool|action|function|actor|server|agent)$`), 'hybrid_describe'],
+  [new RegExp(`^get${SEP}(tool|actor|server|agent)(${SEP}(info|schema|details|definition))?$`), 'hybrid_describe'],
+  [new RegExp(`^(fetch)${SEP}(tool|actor|server|agent)${SEP}(info|schema|details|definition)$`), 'hybrid_describe'],
+  [new RegExp(`^(invoke|call|run|use|execute)${SEP}(tool|action|function|actor|server|agent)$`), 'proxy_invoke'],
+  [new RegExp(`^(list|get)${SEP}(category|categories|namespace|namespaces)$`), 'category_index'],
+  [new RegExp(`^(list${SEP}tools${SEP}in|tools${SEP}in)${SEP}.+$`), 'category_list'],
+  [new RegExp(`^(enable|add)${SEP}(capability|tool|feature|actor|server|agent)$`), 'enable_capability'],
+  [new RegExp(`^(get|export)${SEP}(manifest|openapi|schema|catalog)$`), 'manifest'],
 ];
 
 const DESC_KEYWORDS = ['discover', 'list available', 'browse tools', 'search for tools', 'search for actions', 'all tools'];

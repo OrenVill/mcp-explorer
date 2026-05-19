@@ -102,4 +102,30 @@ describe('detectMetaTools', () => {
     const b = detectMetaTools([tool('github_create_issue'), tool('post_message')]);
     expect(b).toEqual([]);
   });
+
+  test('handles hyphenated names (Apify-style: search-actors)', () => {
+    const b = detectMetaTools([
+      tool('search-actors', { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }),
+    ]);
+    expect(b).toHaveLength(1);
+    expect(b[0].kind).toBe('search');
+  });
+
+  test('detects PulseMCP-style list_servers as bulk_list', () => {
+    const b = detectMetaTools([tool('list_servers')]);
+    expect(b[0].kind).toBe('bulk_list');
+  });
+
+  test('detects add-actor as enable_capability (Apify-style dynamic add)', () => {
+    const b = detectMetaTools([tool('add-actor', { type: 'object', properties: { actor: { type: 'string' } }, required: ['actor'] })]);
+    expect(b[0].kind).toBe('enable_capability');
+  });
+
+  test('detects get-actor-details as hybrid_describe', () => {
+    const b = detectMetaTools([tool(
+      'get-actor-details',
+      { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] },
+    )]);
+    expect(b[0].kind).toBe('hybrid_describe');
+  });
 });
