@@ -164,3 +164,21 @@ export async function readResource(
   const result = await client.readResource({ uri });
   return { contents: result.contents as unknown as ResourceContent[] };
 }
+
+export async function listPrompts(serverId: string): Promise<PromptDef[]> {
+  const client = clients.get(serverId);
+  if (!client) throw new Error(`Not connected to server "${serverId}"`);
+  const result = await client.listPrompts();
+  return result.prompts as unknown as PromptDef[];
+}
+
+export async function getPrompt(
+  serverId: string,
+  name: string,
+  args: Record<string, string>,
+): Promise<PromptMessage[]> {
+  const client = clients.get(serverId);
+  if (!client) throw new Error(`Not connected to server "${serverId}"`);
+  const result = await client.getPrompt({ name, arguments: args });
+  return result.messages as unknown as PromptMessage[];
+}
