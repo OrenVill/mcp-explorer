@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ServerList } from './components/ServerList';
 import { ServerBrowser } from './components/ServerBrowser';
 import { ToolDetail } from './components/ToolDetail';
+import { ResourceDetail } from './components/ResourceDetail';
+import { PromptDetail } from './components/PromptDetail';
 import { VaultLockButton } from './components/VaultLockButton';
 import { VaultSetup } from './components/VaultSetup';
 import { VaultUnlock } from './components/VaultUnlock';
@@ -147,6 +149,20 @@ export default function App() {
     const existing = selectedServer && selectedToolName ? selectedServer.discoveryRuns?.[selectedToolName] : undefined;
     return existing ?? { status: 'idle', probesAttempted: 0, callsMade: 0, toolsFound: 0 };
   }, [selectedServer, selectedToolName]);
+
+  const selectedResource = useMemo(() => {
+    if (!selectedServer || !selectedResourceUri) return null;
+    const direct = selectedServer.resources?.find((r) => r.uri === selectedResourceUri);
+    if (direct) return { type: 'direct' as const, uri: selectedResourceUri };
+    const template = selectedServer.resourceTemplates?.find((t) => t.uriTemplate === selectedResourceUri);
+    if (template) return { type: 'template' as const, uri: selectedResourceUri };
+    return null;
+  }, [selectedServer, selectedResourceUri]);
+
+  const selectedPrompt = useMemo(() => {
+    if (!selectedServer || !selectedPromptName) return null;
+    return selectedServer.prompts?.find((p) => p.name === selectedPromptName) ?? null;
+  }, [selectedServer, selectedPromptName]);
 
   const editingServer = useMemo(
     () => (editingId ? servers.find((s) => s.id === editingId) ?? null : null),
@@ -568,18 +584,32 @@ export default function App() {
           selectedPromptName={selectedPromptName}
           onSelectPrompt={setSelectedPromptName}
         />
-        <ToolDetail
-          server={selectedServer}
-          tool={selectedTool}
-          metaBinding={selectedMeta}
-          discoveryRun={selectedRun}
-          onDiscover={(metaToolName, opts) => {
-            if (selectedServer) void handleDiscover(selectedServer.id, metaToolName, opts);
-          }}
-          onStop={(metaToolName) => {
-            if (selectedServer) handleDiscoveryStop(selectedServer.id, metaToolName);
-          }}
-        />
+        {activeTab === 'resources' && selectedServer && selectedResource ? (
+          <ResourceDetail
+            key={selectedResource.uri}
+            server={selectedServer}
+            uri={selectedResource.uri}
+          />
+        ) : activeTab === 'prompts' && selectedServer && selectedPrompt ? (
+          <PromptDetail
+            key={`${selectedServer.id}:${selectedPrompt.name}`}
+            server={selectedServer}
+            prompt={selectedPrompt}
+          />
+        ) : (
+          <ToolDetail
+            server={selectedServer}
+            tool={selectedTool}
+            metaBinding={selectedMeta}
+            discoveryRun={selectedRun}
+            onDiscover={(metaToolName, opts) => {
+              if (selectedServer) void handleDiscover(selectedServer.id, metaToolName, opts);
+            }}
+            onStop={(metaToolName) => {
+              if (selectedServer) handleDiscoveryStop(selectedServer.id, metaToolName);
+            }}
+          />
+        )}
       </div>
       <ServerFormDialog
         key={dialogFormKey}
