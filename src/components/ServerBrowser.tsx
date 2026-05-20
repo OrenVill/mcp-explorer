@@ -42,13 +42,11 @@ export function ServerBrowser({
   const resourceCount = (server.resources?.length ?? 0) + (server.resourceTemplates?.length ?? 0);
   const promptCount = server.prompts?.length ?? 0;
 
-  const tabs: { id: Tab; label: string; count: number }[] = (
-    [
-      { id: 'tools' as Tab, label: 'Tools', count: toolCount },
-      { id: 'resources' as Tab, label: 'Resources', count: resourceCount },
-      { id: 'prompts' as Tab, label: 'Prompts', count: promptCount },
-    ] as { id: Tab; label: string; count: number }[]
-  ).filter((t) => t.id === 'tools' || t.count > 0);
+  const tabs: { id: Tab; label: string; count: number }[] = [
+    { id: 'tools' as Tab, label: 'Tools', count: toolCount },
+    { id: 'resources' as Tab, label: 'Resources', count: resourceCount },
+    { id: 'prompts' as Tab, label: 'Prompts', count: promptCount },
+  ].filter((t) => t.id === 'tools' || t.count > 0);
 
   const resolvedTab = tabs.some((t) => t.id === activeTab) ? activeTab : 'tools';
 
@@ -69,7 +67,7 @@ export function ServerBrowser({
               ].join(' ')}
             >
               {tab.label}
-              <span className={`ml-1.5 ${resolvedTab === tab.id ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              <span className={['ml-1.5', resolvedTab === tab.id ? 'text-zinc-400' : 'text-zinc-600'].join(' ')}>
                 {tab.count}
               </span>
             </button>
