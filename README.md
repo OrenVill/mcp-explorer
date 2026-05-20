@@ -93,6 +93,22 @@ src/
 
 The browser sends preflight requests with `Mcp-Session-Id` and `Mcp-Protocol-Version` headers. Any server you connect to must allow those in its `Access-Control-Allow-Headers` and expose `Mcp-Session-Id` via `Access-Control-Expose-Headers`.
 
+## Releases
+
+Versioning is SemVer, automated by [release-please](https://github.com/googleapis/release-please) from [Conventional Commit](https://www.conventionalcommits.org/) messages on `main`.
+
+- Every push to `main` updates a long-lived **Release PR** that bumps `package.json`, updates `CHANGELOG.md`, and lists the included changes.
+- Merging the Release PR creates a git tag (`vX.Y.Z`), a GitHub Release with the changelog section, and uploads a built `dist.tgz` artifact.
+- Commit types that bump the version: `feat:` (minor, pre-1.0), `fix:` / `perf:` / `refactor:` (patch). `feat!:` or a `BREAKING CHANGE:` footer triggers a major bump (post-1.0) or a minor bump (pre-1.0).
+
+The package is **not** currently published to the npm registry — the `mcp-explorer` name on npm is held by an unrelated placeholder. To install from source:
+
+```bash
+npm install -g github:OrenVill/mcp-explorer
+```
+
+Or download `dist.tgz` from a [GitHub Release](https://github.com/OrenVill/mcp-explorer/releases) and serve it with any static host.
+
 ## License
 
 MIT.
