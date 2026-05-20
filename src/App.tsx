@@ -11,7 +11,7 @@ import {
 } from './components/ServerFormDialog';
 import { Logo } from './components/Logo';
 import { formatConnectionError } from './lib/connectionErrorMessage';
-import { connect, disconnect, callTool as mcpCallTool, onToolsChanged, refetchTools } from './lib/mcpClient';
+import { connect, disconnect, callTool as mcpCallTool, onToolsChanged, refetchTools, listResources, listPrompts } from './lib/mcpClient';
 import { detectMetaTools } from './lib/discovery/detect';
 import { runDiscovery } from './lib/discovery/orchestrator';
 import { loadLegacyServers, type StoredServer } from './lib/storage';
@@ -66,6 +66,9 @@ export default function App() {
   const [servers, setServers] = useState<ServerEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedToolName, setSelectedToolName] = useState<string | null>(null);
+  const [_activeTab, _setActiveTab] = useState<'tools' | 'resources' | 'prompts'>('tools');
+  const [_selectedResourceUri, setSelectedResourceUri] = useState<string | null>(null);
+  const [_selectedPromptName, setSelectedPromptName] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const aesKeyRef = useRef<CryptoKey | null>(null);
@@ -172,10 +175,24 @@ export default function App() {
     try {
       const tools = await connect(id, url, auth);
       const metaTools = detectMetaTools(tools);
+
+      // Fetch resources and prompts in parallel; ignore if server doesn't support them
+      const [resourceResult, promptResult] = await Promise.allSettled([
+        listResources(id),
+        listPrompts(id),
+      ]);
+
+      const resources = resourceResult.status === 'fulfilled' ? resourceResult.value.resources : undefined;
+      const resourceTemplates = resourceResult.status === 'fulfilled' ? resourceResult.value.templates : undefined;
+      const prompts = promptResult.status === 'fulfilled' ? promptResult.value : undefined;
+
       updateServer(id, {
         status: 'connected',
         tools,
         metaTools,
+        resources,
+        resourceTemplates,
+        prompts,
         discovered: undefined,
         discoveryRuns: {},
         error: undefined,
@@ -200,7 +217,11 @@ export default function App() {
       discovered: undefined,
       discoveryRuns: undefined,
     });
-    if (selectedId === id) setSelectedToolName(null);
+    if (selectedId === id) {
+      setSelectedToolName(null);
+      setSelectedResourceUri(null);
+      setSelectedPromptName(null);
+    }
   }
 
   async function handleDiscover(
@@ -286,6 +307,8 @@ export default function App() {
   function handleSelect(id: string) {
     setSelectedId(id);
     setSelectedToolName(null);
+    setSelectedResourceUri(null);
+    setSelectedPromptName(null);
   }
 
   function handleAddClick() {
