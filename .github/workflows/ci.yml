@@ -1,4 +1,4 @@
-name: CI
+name: build
 
 on:
   pull_request:
@@ -6,11 +6,12 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  test-lint:
+    name: test / lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
