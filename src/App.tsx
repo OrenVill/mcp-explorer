@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ServerList } from './components/ServerList';
-import { ToolList } from './components/ToolList';
+import { ServerBrowser } from './components/ServerBrowser';
 import { ToolDetail } from './components/ToolDetail';
 import { VaultLockButton } from './components/VaultLockButton';
 import { VaultSetup } from './components/VaultSetup';
@@ -66,9 +66,9 @@ export default function App() {
   const [servers, setServers] = useState<ServerEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedToolName, setSelectedToolName] = useState<string | null>(null);
-  const [_activeTab, _setActiveTab] = useState<'tools' | 'resources' | 'prompts'>('tools');
-  const [_selectedResourceUri, setSelectedResourceUri] = useState<string | null>(null);
-  const [_selectedPromptName, setSelectedPromptName] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'tools' | 'resources' | 'prompts'>('tools');
+  const [selectedResourceUri, setSelectedResourceUri] = useState<string | null>(null);
+  const [selectedPromptName, setSelectedPromptName] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const aesKeyRef = useRef<CryptoKey | null>(null);
@@ -552,10 +552,21 @@ export default function App() {
           onRemove={handleRemove}
           onAddClick={handleAddClick}
         />
-        <ToolList
+        <ServerBrowser
           server={selectedServer}
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setSelectedToolName(null);
+            setSelectedResourceUri(null);
+            setSelectedPromptName(null);
+          }}
           selectedToolName={selectedToolName}
-          onSelect={setSelectedToolName}
+          onSelectTool={setSelectedToolName}
+          selectedResourceUri={selectedResourceUri}
+          onSelectResource={setSelectedResourceUri}
+          selectedPromptName={selectedPromptName}
+          onSelectPrompt={setSelectedPromptName}
         />
         <ToolDetail
           server={selectedServer}
