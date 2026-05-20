@@ -2,16 +2,17 @@
 
 A small Vite + React + TypeScript app that connects to **MCP servers over HTTP** from the browser, lists their tools, and lets you invoke them with auto-generated forms.
 
-Add any MCP HTTP endpoint, the explorer auto-connects on add and persists the list to `localStorage`.
+Add any MCP HTTP endpoint, the explorer auto-connects on add and persists the list to an encrypted vault on disk.
 
 ## Features
 
-- **Add / edit / remove** any MCP HTTP server — persisted to `localStorage`, no presets.
+- **Add / edit / remove** any MCP HTTP server — persisted in an encrypted vault, no presets.
 - **Auto-connect on add** — registers the server and immediately establishes the streamable HTTP transport.
 - **Auto-discovered tool list** — calls `tools/list` after connecting.
 - **Generated input forms** from each tool's JSON Schema (strings, numbers, booleans, enums, JSON for objects/arrays).
 - **Live tool invocation** with text + structured result display.
 - **Meta-tool discovery** — recognizes tools that exist to discover *other* tools (`list_tools`, `search_tools`, `invoke_tool`, `get_manifest`, etc.) and surfaces a one-click **Discover all tools** button. Discovered tools appear in a collapsible section in the tool list and can be invoked directly or routed through a proxy meta-tool.
+- **Encrypted vault** — server configs and auth credentials are encrypted with AES-GCM (PBKDF2 key derivation) and stored in `~/.mcp-explorer/vault.json`. The key never leaves memory.
 
 ## Tech
 
@@ -70,24 +71,48 @@ Use the **✎** button next to a server to edit its name, URL, or description; *
 ```
 bin/
 └── mcp-explorer.js              # CLI: vite build (silent) → server.js → opens browser
+proxy.js                         # zero-dep HTTP proxy for MCP servers (CORS bypass)
 server.js                        # zero-dep static server for dist/ (used by `npm start`)
+vault-file-handler.js            # /__vault_storage GET/PUT/DELETE → ~/.mcp-explorer/vault.json
 src/
-├── App.tsx                      # 3-column layout + state
+├── App.tsx                      # vault bootstrap, 3-column layout, all top-level state
 ├── main.tsx                     # entry
-├── index.css                    # Tailwind import
-├── types.ts                     # ServerEntry, ToolDef, ToolResult, JSON Schema
+├── types.ts                     # ServerEntry, ToolDef, MetaToolBinding, DiscoveryRun, JSON Schema
 ├── lib/
-│   ├── mcpClient.ts             # Client + StreamableHTTPClientTransport wrapper
-│   └── storage.ts               # localStorage persistence for the server list
+│   ├── mcpClient.ts             # Client + StreamableHTTPClientTransport wrapper (routes via proxy)
+│   ├── storage.ts               # legacy localStorage helpers (migration source)
+│   ├── discovery/
+│   │   ├── detect.ts            # score tools → MetaToolBinding[] (name patterns + schema shape)
+│   │   ├── orchestrator.ts      # runDiscovery(): dispatch to strategy, enforce limits, merge results
+│   │   ├── strategy.ts          # DiscoveryStrategy interface + shared types
+│   │   └── strategies/          # one file per MetaToolKind
+│   └── vault/
+│       ├── crypto.ts            # PBKDF2 key derivation + AES-GCM encrypt/decrypt
+│       ├── service.ts           # createVault / unlockVault / saveVault / resetVault
+│       ├── vaultPersistence.ts  # GET/PUT/DELETE /__vault_storage (falls back to IndexedDB)
+│       └── idb.ts               # IndexedDB fallback for file:// or offline use
 └── components/
-    ├── Logo.tsx                 # logo mark (used in navbar + favicon)
     ├── ServerList.tsx           # left column — connect / disconnect / edit / remove
-    ├── ToolList.tsx             # middle column — tools advertised by the server
-    ├── ToolDetail.tsx           # right column — form + result
+    ├── ToolList.tsx             # middle column — tools + discovered tools
+    ├── ToolDetail.tsx           # right column — form + result + discovery controls
     ├── SchemaForm.tsx           # JSON Schema → form
     ├── ResultPane.tsx           # render MCP tool results
-    └── ServerFormDialog.tsx     # add / edit server modal
+    ├── ServerFormDialog.tsx     # add / edit server modal (supports Bearer, API key, Basic auth)
+    ├── VaultSetup.tsx           # first-run passphrase creation
+    ├── VaultUnlock.tsx          # passphrase entry on return
+    ├── VaultLockButton.tsx      # lock button in header
+    ├── DiscoveryHeader.tsx      # meta-tool discovery trigger + status
+    ├── DiscoveryProgress.tsx    # live call/found counters during discovery
+    └── DiscoveredToolsSection.tsx  # collapsible list of discovered tools
 ```
+
+## Vault
+
+On first launch the app asks you to create a passphrase. Your server list and auth credentials are then encrypted with AES-GCM (256-bit key derived via PBKDF2-SHA-256, 310 000 iterations) and stored in `~/.mcp-explorer/vault.json`. The passphrase and derived key are never written to disk.
+
+Override the storage directory: `MCP_EXPLORER_DATA_DIR=/path/to/dir`.
+
+If the Node server is unreachable (e.g. opened as `file://`) the encrypted blob falls back to IndexedDB automatically.
 
 ## CORS notes
 
