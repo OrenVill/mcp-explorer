@@ -18,6 +18,7 @@ import { connect, disconnect, callTool as mcpCallTool, onToolsChanged, refetchTo
 import { detectMetaTools } from './lib/discovery/detect';
 import { runDiscovery } from './lib/discovery/orchestrator';
 import { loadLegacyServers, type StoredServer } from './lib/storage';
+import { initAppData } from './lib/appData';
 import {
   createVault,
   getBootstrapPhase,
@@ -87,6 +88,7 @@ export default function App() {
   }, [servers, vaultPhase]);
 
   useEffect(() => {
+    void initAppData().catch(() => { /* silent — falls back to in-memory defaults */ });
     void (async () => {
       try {
         const phase = await getBootstrapPhase();
