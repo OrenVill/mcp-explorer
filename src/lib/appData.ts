@@ -122,8 +122,12 @@ export async function initAppData(): Promise<void> {
       cache = migrated;
       initialized = true;
       if (hasLegacyLocalStorage()) {
-        await persistToFile(cache).catch(() => { /* keep legacy keys as fallback */ });
-        clearLegacyLocalStorage();
+        let persistedOk = false;
+        try {
+          await persistToFile(cache);
+          persistedOk = true;
+        } catch { /* keep legacy keys as fallback */ }
+        if (persistedOk) clearLegacyLocalStorage();
       }
       return;
     }

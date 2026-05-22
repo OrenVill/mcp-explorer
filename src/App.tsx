@@ -88,8 +88,8 @@ export default function App() {
   }, [servers, vaultPhase]);
 
   useEffect(() => {
-    void initAppData().catch(() => { /* silent — falls back to in-memory defaults */ });
     void (async () => {
+      await initAppData().catch(() => { /* silent — falls back to in-memory defaults */ });
       try {
         const phase = await getBootstrapPhase();
         setVaultPhase(phase);
