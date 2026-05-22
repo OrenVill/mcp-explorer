@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { ServerEntry } from '../types';
 import { exportAsMarkdown, exportAsJson, downloadFile, serverSlug } from '../lib/export';
 
@@ -15,11 +15,6 @@ export function ExportDialog({ server, onClose }: Props) {
 
   const content =
     activeTab === 'markdown' ? exportAsMarkdown(server) : exportAsJson(server);
-
-  // Reset copied state when tab changes
-  useEffect(() => {
-    setCopied(false);
-  }, [activeTab]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -87,7 +82,7 @@ export function ExportDialog({ server, onClose }: Props) {
             <button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => { setActiveTab(tab); setCopied(false); }}
               className={[
                 'px-3 py-2 text-[11px] font-medium transition-colors border-b-2 -mb-px uppercase tracking-wide',
                 activeTab === tab
