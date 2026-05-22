@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ServerEntry } from '../types';
 import { exportAsMarkdown, exportAsJson, downloadFile, serverSlug } from '../lib/export';
 
