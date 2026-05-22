@@ -132,26 +132,23 @@ export function GlobalSearch({ servers, onSelectTool, onSelectResource, onSelect
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        setOpen((prev) => {
+          if (!prev) {
+            setQuery('');
+            setActiveIndex(0);
+          }
+          return !prev;
+        });
       }
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // Auto-focus input when modal opens
+  // Auto-focus input when modal opens (DOM operation, not setState)
   useEffect(() => {
-    if (open) {
-      setQuery('');
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
-
-  // Keep activeIndex in bounds when results change
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
 
   // Scroll active item into view
   useEffect(() => {
@@ -230,7 +227,7 @@ export function GlobalSearch({ servers, onSelectTool, onSelectResource, onSelect
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={handleKeyDown}
             placeholder="Search tools, resources, prompts…"
             className="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-600 outline-none"
@@ -309,11 +306,3 @@ export function GlobalSearch({ servers, onSelectTool, onSelectResource, onSelect
   );
 }
 
-/** Standalone opener — call this to open the modal from outside */
-export function useGlobalSearch() {
-  return {
-    openSearch: () => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
-    },
-  };
-}
