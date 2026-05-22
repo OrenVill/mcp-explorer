@@ -43,6 +43,16 @@ describe('appData (localStorage fallback path)', () => {
     expect(getAppData().history[0].id).toBe('r1');
   });
 
+  it('initAppData loads from unified localStorage key when present', async () => {
+    store['mcp-explorer:app-data'] = JSON.stringify({
+      version: 1,
+      bookmarks: ['s::unified'],
+      history: [],
+    });
+    await initAppData();
+    expect(getAppData().bookmarks).toEqual(['s::unified']);
+  });
+
   it('initAppData is idempotent — second call is a no-op', async () => {
     store['mcp-explorer:bookmarks'] = JSON.stringify(['s::t']);
     await initAppData();
