@@ -40,7 +40,7 @@ export function PromptDetail({ server, prompt }: Props) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries((prompt.arguments ?? []).map((a) => [a.name, ''])),
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!hasArgs);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<PromptMessage[] | null>(null);
 
@@ -58,13 +58,17 @@ export function PromptDetail({ server, prompt }: Props) {
     }
   }
 
-  // Auto-fetch for prompts without arguments
+  // Auto-fetch for prompts without arguments — all setState calls are in async
+  // callbacks so they don't trigger synchronous cascading renders in the effect.
   useEffect(() => {
-    if (!hasArgs) {
-      void doGet({});
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt.name, server.id]);
+    if (hasArgs) return;
+    let cancelled = false;
+    getPrompt(server.id, prompt.name, {})
+      .then((result) => { if (!cancelled) setMessages(result); })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [prompt.name, server.id, hasArgs]);
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
