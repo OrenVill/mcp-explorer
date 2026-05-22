@@ -55,7 +55,11 @@ function ToolDetailSession({ server, tool, metaBinding, discoveryRun, onDiscover
   const [resultEpoch, setResultEpoch] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<CallRecord[]>(() => loadHistory());
+  const [history, setHistory] = useState<CallRecord[]>(() =>
+    loadHistory().filter(
+      (r) => r.serverId === server?.id && r.toolName === tool?.name,
+    ),
+  );
 
   if (!server) {
     return <EmptyState>Select a server from the left to begin.</EmptyState>;
@@ -107,7 +111,7 @@ function ToolDetailSession({ server, tool, metaBinding, discoveryRun, onDiscover
         isDiscovered: !!(tool as DiscoveredTool).source,
       };
       appendRecord(record);
-      setHistory(loadHistory());
+      setHistory(loadHistory().filter((r) => r.serverId === server?.id && r.toolName === tool?.name));
       setLoading(false);
     }
   }
