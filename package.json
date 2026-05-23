@@ -1,8 +1,19 @@
 {
-  "name": "mcp-explorer",
+  "name": "@orenvill/mcp-explorer",
   "version": "0.4.0",
   "description": "Browser-based explorer for MCP servers over streamable HTTP — list and invoke tools with auto-generated forms.",
+  "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OrenVill/mcp-explorer"
+  },
+  "homepage": "https://github.com/OrenVill/mcp-explorer",
+  "keywords": ["mcp", "model-context-protocol", "developer-tools", "cli"],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "bin": {
     "mcp-explorer": "bin/mcp-explorer.js"
   },
