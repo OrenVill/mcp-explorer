@@ -39,23 +39,62 @@ function BinaryContent({ content }: { content: ResourceContent }) {
 }
 
 function ContentBlock({ content }: { content: ResourceContent }) {
+  const [view, setView] = useState<'code' | 'preview'>('code');
+
   if (content.text !== undefined) {
     const lang = mimeToLang(content.mimeType);
+    const mime = content.mimeType ?? 'text';
+    const isMarkdown = lang === 'markdown';
+    const isHtml = lang === 'html';
+    const hasPreview = isMarkdown || isHtml;
+
     return (
       <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
         <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
           <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold">
-            {content.mimeType ?? 'text'}
+            {mime}
           </span>
-          <button
-            type="button"
-            onClick={() => { navigator.clipboard?.writeText(content.text!).catch(() => {}); }}
-            className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            copy
-          </button>
+          <div className="flex items-center gap-2">
+            {hasPreview && (
+              <div className="inline-flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+                {(['code', 'preview'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setView(v)}
+                    className={
+                      view === v
+                        ? 'px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-700 text-zinc-100'
+                        : 'px-2 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300'
+                    }
+                  >
+                    {v === 'code' ? 'Code' : 'Preview'}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard?.writeText(content.text!).catch(() => {}); }}
+              className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              copy
+            </button>
+          </div>
         </div>
-        <CodeBlock code={content.text} lang={lang} />
+        {view === 'preview' && isMarkdown ? (
+          <MarkdownPreview source={content.text} />
+        ) : view === 'preview' && isHtml ? (
+          <iframe
+            srcDoc={content.text}
+            sandbox="allow-scripts"
+            title={content.uri}
+            className="w-full block"
+            style={{ minHeight: '320px', border: 'none' }}
+          />
+        ) : (
+          <CodeBlock code={content.text} lang={lang} />
+        )}
       </div>
     );
   }
