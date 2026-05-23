@@ -100,6 +100,13 @@ if (args[0] === 'stop') {
     process.exit(0);
   }
   process.kill(lock.pid, 'SIGTERM');
+  const STOP_TIMEOUT = 3000;
+  const STOP_INTERVAL = 50;
+  let waited = 0;
+  while (isAlive(lock.pid) && waited < STOP_TIMEOUT) {
+    await new Promise((r) => setTimeout(r, STOP_INTERVAL));
+    waited += STOP_INTERVAL;
+  }
   await deleteLock();
   console.log(paint('1;38;5;141', 'mcp-explorer') + ' stopped');
   process.exit(0);
