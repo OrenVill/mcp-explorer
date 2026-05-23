@@ -90,6 +90,17 @@ input:focus, textarea:focus, select:focus, button:focus-visible {
 .md-preview td { border-bottom: 1px solid #27272a; padding: 0.4em 0.75em; }
 .md-preview img { max-width: 100%; border-radius: 6px; }
 
+/* Compact markdown for descriptions / labels */
+.md-preview-compact { font-size: 0.75rem; line-height: 1.5; color: #a1a1aa; }
+.md-preview-compact p { margin: 0 0 0.2em; }
+.md-preview-compact p:last-child { margin-bottom: 0; }
+.md-preview-compact code { background: #27272a; color: #c4b5fd; padding: 0.1em 0.35em; border-radius: 3px; font-family: ui-monospace, monospace; font-size: 0.85em; }
+.md-preview-compact strong { color: #d4d4d8; font-weight: 600; }
+.md-preview-compact em { font-style: italic; }
+.md-preview-compact a { color: #a78bfa; text-decoration: underline; text-underline-offset: 2px; }
+.md-preview-compact ul, .md-preview-compact ol { padding-left: 1.2em; margin: 0.2em 0; }
+.md-preview-compact li { margin-bottom: 0.1em; }
+
 /* Subtle radial backdrop */
 body::before {
   content: "";

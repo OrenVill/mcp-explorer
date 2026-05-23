@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ResourceContent, ResourceEntry, ResourceTemplate, ServerEntry } from '../types';
+import { MarkdownPreview } from './MarkdownPreview';
 import { readResource } from '../lib/mcpClient';
 import { extractUriTemplateVars, fillUriTemplate } from '../lib/uriTemplate';
 import { CodeBlock } from './CodeBlock';
@@ -94,7 +95,7 @@ function DirectResource({ server, resource }: { server: ServerEntry; resource: R
           <h2 className="text-zinc-100 font-semibold">{resource.name}</h2>
           <p className="text-[11px] text-zinc-500 font-mono mt-0.5 break-all">{resource.uri}</p>
           {resource.description && (
-            <p className="text-sm text-zinc-400 mt-1">{resource.description}</p>
+            <MarkdownPreview source={resource.description} className="md-preview-compact" />
           )}
         </div>
         <button
@@ -146,7 +147,7 @@ function TemplateResource({ server, template }: { server: ServerEntry; template:
         <h2 className="text-zinc-100 font-semibold">{template.name}</h2>
         <p className="text-[11px] text-zinc-500 font-mono mt-0.5 break-all">{template.uriTemplate}</p>
         {template.description && (
-          <p className="text-sm text-zinc-400 mt-1">{template.description}</p>
+          <MarkdownPreview source={template.description} className="md-preview-compact" />
         )}
       </div>
       {vars.length > 0 && (

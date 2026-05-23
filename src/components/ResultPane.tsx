@@ -69,22 +69,72 @@ function TextContentBlock({ content }: { content: ToolContent }) {
 }
 
 function ResourceBlock({ content }: { content: ToolContent }) {
-  const resource = content.resource as { uri?: string; mimeType?: string; text?: string } | undefined;
+  const resource = content.resource as { uri?: string; mimeType?: string; text?: string; blob?: string } | undefined;
   const [view, setView] = useState<'code' | 'preview'>('code');
 
   if (!resource?.text) {
+    // blob-only image
+    if (resource?.blob && resource.mimeType?.startsWith('image/')) {
+      const src = `data:${resource.mimeType};base64,${resource.blob}`;
+      return (
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+          <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+              resource <span className="text-zinc-700">·</span>
+              <span className="text-zinc-500/80 normal-case font-mono">{resource.mimeType}</span>
+            </span>
+            <a href={src} download className="text-[10px] uppercase tracking-wider text-violet-400 hover:text-violet-300 transition-colors">Download</a>
+          </div>
+          <div className="p-4">
+            <img src={src} alt={resource.uri ?? ''} className="max-w-full rounded-lg border border-zinc-800" />
+          </div>
+        </div>
+      );
+    }
     return <CodeBlock code={JSON.stringify(content, null, 2)} lang="json" />;
   }
 
   const { uri = '', mimeType = 'text/plain', text } = resource;
   const isHtml = mimeType === 'text/html' || mimeType.endsWith('+html');
   const isMarkdown = mimeType === 'text/markdown';
-  const hasPreview = isHtml || isMarkdown;
+  const isImage = mimeType.startsWith('image/');
+  const isSvg = mimeType === 'image/svg+xml';
+  const hasPreview = isHtml || isMarkdown || isSvg;
+
+  const imageSrc = isImage
+    ? resource.blob
+      ? `data:${mimeType};base64,${resource.blob}`
+      : resource.text
+      ? `data:${mimeType};charset=utf-8,${encodeURIComponent(resource.text)}`
+      : null
+    : null;
 
   const lang: SupportedLang = isHtml ? 'html'
     : isMarkdown ? 'markdown'
+    : isSvg ? 'html'
     : mimeType === 'application/json' ? 'json'
     : detectLanguage(text);
+
+  // Pure image (non-SVG) — just show the image with a download link, no toggle
+  if (isImage && !isSvg && imageSrc) {
+    return (
+      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+        <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+          <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+            resource <span className="text-zinc-700">·</span>
+            <span className="text-zinc-500/80 normal-case font-mono">{mimeType}</span>
+          </span>
+        </div>
+        <div className="p-4 flex flex-col items-start gap-3">
+          <img src={imageSrc} alt={uri} className="max-w-full rounded-lg border border-zinc-800" />
+          <a href={imageSrc} download={uri.split('/').pop() ?? 'image'}
+            className="text-[10px] uppercase tracking-wider text-violet-400 hover:text-violet-300 transition-colors">
+            Download
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
@@ -115,8 +165,12 @@ function ResourceBlock({ content }: { content: ToolContent }) {
           className="w-full block"
           style={{ minHeight: '320px', border: 'none' }}
         />
-      ) : view === 'preview' && isMarkdown ? (
-        <MarkdownPreview source={text} />
+      ) : view === 'preview' && (isMarkdown || isSvg) ? (
+        isMarkdown ? (
+          <MarkdownPreview source={text} />
+        ) : (
+          <img src={imageSrc!} alt={uri} className="max-w-full p-4 rounded-lg" />
+        )
       ) : (
         <CodeBlock code={text} lang={lang} />
       )}
