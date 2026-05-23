@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { marked } from 'marked';
 import type { ToolContent, ToolResult } from '../types';
 import { CodeBlock } from './CodeBlock';
 import { detectLanguage, type SupportedLang } from '../lib/highlighter';
@@ -11,6 +12,67 @@ interface Props {
 
 type ResultView = 'formatted' | 'raw';
 
+function MarkdownPreview({ source }: { source: string }) {
+  const html = marked.parse(source) as string;
+  return <div className="md-preview" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function ViewToggle({ view, onChange }: { view: 'code' | 'preview'; onChange: (v: 'code' | 'preview') => void }) {
+  return (
+    <div className="inline-flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+      {(['code', 'preview'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={
+            view === v
+              ? 'px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-700 text-zinc-100'
+              : 'px-2 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300'
+          }
+        >
+          {v === 'code' ? 'Code' : 'Preview'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TextContentBlock({ content }: { content: ToolContent }) {
+  const [view, setView] = useState<'code' | 'preview'>('code');
+  const raw = content.text as string;
+  const lang = detectLanguage(raw);
+  const isMarkdown = lang === 'markdown';
+
+  return (
+    <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+      <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+          {content.type}
+          <span className="text-zinc-700">·</span>
+          <span className="text-zinc-500/80 normal-case tracking-normal">{lang}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          {isMarkdown && <ViewToggle view={view} onChange={setView} />}
+          <button
+            type="button"
+            onClick={() => { navigator.clipboard?.writeText(raw).catch(() => {}); }}
+            className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="Copy"
+          >
+            copy
+          </button>
+        </div>
+      </div>
+      {isMarkdown && view === 'preview' ? (
+        <MarkdownPreview source={raw} />
+      ) : (
+        <CodeBlock code={raw} lang={lang} />
+      )}
+    </div>
+  );
+}
+
 function ResourceBlock({ content }: { content: ToolContent }) {
   const resource = content.resource as { uri?: string; mimeType?: string; text?: string } | undefined;
   const [view, setView] = useState<'code' | 'preview'>('code');
@@ -21,10 +83,12 @@ function ResourceBlock({ content }: { content: ToolContent }) {
 
   const { uri = '', mimeType = 'text/plain', text } = resource;
   const isHtml = mimeType === 'text/html' || mimeType.endsWith('+html');
+  const isMarkdown = mimeType === 'text/markdown';
+  const hasPreview = isHtml || isMarkdown;
 
   const lang: SupportedLang = isHtml ? 'html'
+    : isMarkdown ? 'markdown'
     : mimeType === 'application/json' ? 'json'
-    : mimeType === 'text/markdown' ? 'markdown'
     : detectLanguage(text);
 
   return (
@@ -36,24 +100,7 @@ function ResourceBlock({ content }: { content: ToolContent }) {
           <span className="text-zinc-500/80 normal-case tracking-normal font-mono">{mimeType}</span>
         </span>
         <div className="flex items-center gap-2">
-          {isHtml && (
-            <div className="inline-flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-              {(['code', 'preview'] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setView(v)}
-                  className={
-                    view === v
-                      ? 'px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-700 text-zinc-100'
-                      : 'px-2 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300'
-                  }
-                >
-                  {v === 'code' ? 'Code' : 'Preview'}
-                </button>
-              ))}
-            </div>
-          )}
+          {hasPreview && <ViewToggle view={view} onChange={setView} />}
           <button
             type="button"
             onClick={() => { navigator.clipboard?.writeText(text).catch(() => {}); }}
@@ -65,7 +112,7 @@ function ResourceBlock({ content }: { content: ToolContent }) {
         </div>
       </div>
 
-      {isHtml && view === 'preview' ? (
+      {view === 'preview' && isHtml ? (
         <iframe
           srcDoc={text}
           sandbox="allow-scripts"
@@ -73,6 +120,8 @@ function ResourceBlock({ content }: { content: ToolContent }) {
           className="w-full block"
           style={{ minHeight: '320px', border: 'none' }}
         />
+      ) : view === 'preview' && isMarkdown ? (
+        <MarkdownPreview source={text} />
       ) : (
         <CodeBlock code={text} lang={lang} />
       )}
@@ -185,32 +234,25 @@ export function ResultPane({ result, error, loading }: Props) {
             </div>
           )}
           {result.content.map((c, i) => {
-            if (c.type === 'resource') {
-              return <ResourceBlock key={i} content={c} />;
-            }
-            const isText = c.type === 'text' && c.text !== undefined;
-            const raw = isText ? (c.text as string) : JSON.stringify(c, null, 2);
-            const lang = isText ? detectLanguage(raw) : 'json';
+            if (c.type === 'resource') return <ResourceBlock key={i} content={c} />;
+            if (c.type === 'text' && c.text !== undefined) return <TextContentBlock key={i} content={c} />;
+            const raw = JSON.stringify(c, null, 2);
             return (
               <div key={i} className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
                 <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
-                  <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold">
                     {c.type}
-                    <span className="text-zinc-700">·</span>
-                    <span className="text-zinc-500/80 normal-case tracking-normal">{lang}</span>
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(raw).catch(() => {});
-                    }}
+                    onClick={() => { navigator.clipboard?.writeText(raw).catch(() => {}); }}
                     className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
                     title="Copy"
                   >
                     copy
                   </button>
                 </div>
-                <CodeBlock code={raw} lang={lang} />
+                <CodeBlock code={raw} lang="json" />
               </div>
             );
           })}
