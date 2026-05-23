@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CallRecord } from '../lib/history';
 import { ResultPane } from './ResultPane';
+import { CodeBlock } from './CodeBlock';
 
 interface Props {
   history: CallRecord[];
@@ -80,9 +81,7 @@ function RecordDetail({ record, onReplay }: { record: CallRecord; onReplay: () =
           <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold">Args</span>
           <CopyButton text={argsJson} />
         </div>
-        <pre className="text-xs font-mono leading-5 overflow-x-auto whitespace-pre p-3 text-zinc-300">
-          {argsJson}
-        </pre>
+        <CodeBlock code={argsJson} lang="json" />
       </div>
       <div>
         <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold mb-2">Result</div>

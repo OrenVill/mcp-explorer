@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ServerEntry } from '../types';
 import { exportAsMarkdown, exportAsJson, downloadFile, serverSlug } from '../lib/export';
+import { CodeBlock } from './CodeBlock';
 
 type ExportTab = 'markdown' | 'json';
 
@@ -96,14 +97,10 @@ export function ExportDialog({ server, onClose }: Props) {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 min-h-0 p-4">
-          <textarea
-            readOnly
-            value={content}
-            className="w-full h-full font-mono text-xs bg-zinc-950/80 border border-zinc-800/60 rounded-lg p-3 text-zinc-300 resize-none outline-none focus:border-zinc-700 leading-relaxed"
-            style={{ minHeight: '60vh' }}
-            spellCheck={false}
-          />
+        <div className="flex-1 min-h-0 overflow-auto p-4">
+          <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/80 overflow-hidden" style={{ minHeight: '55vh' }}>
+            <CodeBlock code={content} lang={activeTab === 'markdown' ? 'markdown' : 'json'} />
+          </div>
         </div>
 
         {/* Footer */}

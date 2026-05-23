@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { ToolResult } from '../types';
+import type { ToolContent, ToolResult } from '../types';
 import { CodeBlock } from './CodeBlock';
-import { detectLanguage } from '../lib/highlighter';
+import { detectLanguage, type SupportedLang } from '../lib/highlighter';
 
 interface Props {
   result: ToolResult | null;
@@ -10,6 +10,75 @@ interface Props {
 }
 
 type ResultView = 'formatted' | 'raw';
+
+function ResourceBlock({ content }: { content: ToolContent }) {
+  const resource = content.resource as { uri?: string; mimeType?: string; text?: string } | undefined;
+  const [view, setView] = useState<'code' | 'preview'>('code');
+
+  if (!resource?.text) {
+    return <CodeBlock code={JSON.stringify(content, null, 2)} lang="json" />;
+  }
+
+  const { uri = '', mimeType = 'text/plain', text } = resource;
+  const isHtml = mimeType === 'text/html' || mimeType.endsWith('+html');
+
+  const lang: SupportedLang = isHtml ? 'html'
+    : mimeType === 'application/json' ? 'json'
+    : mimeType === 'text/markdown' ? 'markdown'
+    : detectLanguage(text);
+
+  return (
+    <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden">
+      <div className="px-4 py-1.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-950/40">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 font-semibold flex items-center gap-2">
+          resource
+          <span className="text-zinc-700">·</span>
+          <span className="text-zinc-500/80 normal-case tracking-normal font-mono">{mimeType}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          {isHtml && (
+            <div className="inline-flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+              {(['code', 'preview'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  className={
+                    view === v
+                      ? 'px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-700 text-zinc-100'
+                      : 'px-2 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-300'
+                  }
+                >
+                  {v === 'code' ? 'Code' : 'Preview'}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => { navigator.clipboard?.writeText(text).catch(() => {}); }}
+            className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="Copy"
+          >
+            copy
+          </button>
+        </div>
+      </div>
+
+      {isHtml && view === 'preview' ? (
+        <iframe
+          srcDoc={text}
+          sandbox="allow-scripts"
+          title={uri}
+          className="w-full block"
+          style={{ minHeight: '320px', border: 'none' }}
+        />
+      ) : (
+        <CodeBlock code={text} lang={lang} />
+      )}
+    </div>
+  );
+}
 
 function RawResultBlock({ result }: { result: ToolResult }) {
   const raw = JSON.stringify(result, null, 2);
@@ -116,6 +185,9 @@ export function ResultPane({ result, error, loading }: Props) {
             </div>
           )}
           {result.content.map((c, i) => {
+            if (c.type === 'resource') {
+              return <ResourceBlock key={i} content={c} />;
+            }
             const isText = c.type === 'text' && c.text !== undefined;
             const raw = isText ? (c.text as string) : JSON.stringify(c, null, 2);
             const lang = isText ? detectLanguage(raw) : 'json';
