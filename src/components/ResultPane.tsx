@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { marked } from 'marked';
 import type { ToolContent, ToolResult } from '../types';
 import { CodeBlock } from './CodeBlock';
+import { MarkdownPreview } from './MarkdownPreview';
 import { detectLanguage, type SupportedLang } from '../lib/highlighter';
 
 interface Props {
@@ -11,11 +11,6 @@ interface Props {
 }
 
 type ResultView = 'formatted' | 'raw';
-
-function MarkdownPreview({ source }: { source: string }) {
-  const html = marked.parse(source) as string;
-  return <div className="md-preview" dangerouslySetInnerHTML={{ __html: html }} />;
-}
 
 function ViewToggle({ view, onChange }: { view: 'code' | 'preview'; onChange: (v: 'code' | 'preview') => void }) {
   return (
