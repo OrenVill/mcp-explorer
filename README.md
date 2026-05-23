@@ -30,22 +30,20 @@ Then make sure an MCP server is running somewhere (it must expose a streamable-H
 
 ## Run as a CLI
 
-Install globally to get an `mcp-explorer` command that builds the app and serves the production bundle on `http://127.0.0.1:4173/` — and opens your default browser.
+Install globally to get an `mcp-explorer` command that serves the app on `http://127.0.0.1:4173/` and opens your default browser.
 
 ```bash
 npm install -g @orenvill/mcp-explorer
-mcp-explorer              # build + start + open browser
+mcp-explorer              # start + open browser
 mcp-explorer 3000         # custom port
 mcp-explorer --no-open    # skip browser (also: OPEN=0)
 ```
 
-The CLI runs `vite build` silently and prints a single colored ready line:
+The CLI prints a single colored ready line:
 
 ```
   mcp-explorer  ➜  http://127.0.0.1:4173/
 ```
-
-If the build fails, the captured vite output is printed.
 
 ## Build / serve
 
