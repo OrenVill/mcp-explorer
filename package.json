@@ -24,20 +24,14 @@
   },
   "files": [
     "bin",
-    "src",
-    "public",
-    "index.html",
+    "dist",
     "server.js",
+    "proxy.js",
+    "proxy.d.ts",
     "vault-file-handler.js",
     "vault-file-handler.d.ts",
     "app-data-handler.js",
-    "app-data-handler.d.ts",
-    "proxy.js",
-    "proxy.d.ts",
-    "vite.config.ts",
-    "tsconfig.json",
-    "tsconfig.app.json",
-    "tsconfig.node.json"
+    "app-data-handler.d.ts"
   ],
   "scripts": {
     "dev": "vite",
