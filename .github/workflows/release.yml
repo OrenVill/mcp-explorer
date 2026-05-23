@@ -51,4 +51,4 @@ jobs:
         run: gh release upload "${{ needs.release-please.outputs.tag_name }}" dist.tgz --clobber
 
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --provenance

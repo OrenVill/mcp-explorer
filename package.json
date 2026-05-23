@@ -6,7 +6,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OrenVill/mcp-explorer"
+    "url": "git+https://github.com/OrenVill/mcp-explorer.git"
   },
   "homepage": "https://github.com/OrenVill/mcp-explorer",
   "keywords": [
@@ -16,8 +16,7 @@
     "cli"
   ],
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "bin": {
     "mcp-explorer": "bin/mcp-explorer.js"
