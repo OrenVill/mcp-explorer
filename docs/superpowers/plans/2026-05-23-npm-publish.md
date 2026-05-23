@@ -107,7 +107,7 @@ The `devDependencies` section should become (merging existing devDeps with the m
 }
 ```
 
-Note: `@rolldown/binding-linux-x64-gnu` is dropped entirely — it's a platform-specific vite internal that should never have been a listed dependency.
+Note: `@rolldown/binding-linux-x64-gnu` moves to `devDependencies` (not dropped) — it is required for `vite build` to work on Linux x64. Pin it at `^1.0.2` to match the installed rolldown version.
 
 - [ ] **Step 2: Sync the lock file**
 
