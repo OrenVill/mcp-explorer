@@ -30,7 +30,7 @@ export interface SchemaLabIssue {
 export function getSchemaLabSummary(tool: ToolDef): SchemaLabSummary {
   const properties = tool.inputSchema.properties ?? {};
   const required = tool.inputSchema.required ?? [];
-  const rootType = getSchemaType(tool.inputSchema);
+  const rootType = getRootSchemaType(tool.inputSchema);
 
   return {
     rootType,
@@ -46,7 +46,7 @@ export function getSchemaLabRows(tool: ToolDef): SchemaLabRow[] {
 
   return Object.entries(tool.inputSchema.properties ?? {}).map(([name, property]) => ({
     name,
-    type: getSchemaType(property),
+    type: getPropertySchemaType(property),
     required: required.has(name),
     description: property.description,
     defaultValue: property.default,
@@ -75,7 +75,7 @@ export function buildJsonRpcToolCall(tool: ToolDef): {
 
 export function validateToolSchema(tool: ToolDef): SchemaLabIssue[] {
   const issues: SchemaLabIssue[] = [];
-  const rootType = getSchemaType(tool.inputSchema);
+  const rootType = getRootSchemaType(tool.inputSchema);
   const properties = tool.inputSchema.properties ?? {};
 
   if (rootType !== 'object') {
@@ -95,7 +95,7 @@ export function validateToolSchema(tool: ToolDef): SchemaLabIssue[] {
   }
 
   for (const [name, property] of Object.entries(properties)) {
-    const type = getSchemaType(property);
+    const type = getPropertySchemaType(property);
 
     if (!SUPPORTED_TYPES.has(type)) {
       issues.push({
@@ -127,7 +127,7 @@ function generatePropertyExample(property: JsonSchemaProperty): unknown {
     return property.enum[0];
   }
 
-  switch (getSchemaType(property)) {
+  switch (getPropertySchemaType(property)) {
     case 'number':
     case 'integer':
       return property.minimum ?? 0;
@@ -143,7 +143,18 @@ function generatePropertyExample(property: JsonSchemaProperty): unknown {
   }
 }
 
-function getSchemaType(schema: { type?: string | string[] }): string {
-  const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
-  return type ?? 'object';
+function getRootSchemaType(schema: { type?: string | string[] }): string {
+  return getSchemaType(schema, 'object');
+}
+
+function getPropertySchemaType(schema: { type?: string | string[] }): string {
+  return getSchemaType(schema, 'string');
+}
+
+function getSchemaType(schema: { type?: string | string[] }, defaultType: string): string {
+  if (Array.isArray(schema.type)) {
+    return schema.type.find((type) => type !== 'null') ?? defaultType;
+  }
+
+  return schema.type ?? defaultType;
 }

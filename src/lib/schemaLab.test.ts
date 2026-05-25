@@ -181,4 +181,80 @@ describe('schemaLab', () => {
       },
     ]);
   });
+
+  test('treats a property with no type as a string like SchemaForm', () => {
+    const noTypeTool: ToolDef = {
+      name: 'no_type_tool',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {},
+        },
+      },
+    };
+
+    expect(getSchemaLabRows(noTypeTool)).toEqual([
+      {
+        name: 'query',
+        type: 'string',
+        required: false,
+        description: undefined,
+        defaultValue: undefined,
+        enumValues: undefined,
+        minimum: undefined,
+        maximum: undefined,
+      },
+    ]);
+    expect(generateExampleArgs(noTypeTool)).toEqual({ query: 'string' });
+    expect(validateToolSchema(noTypeTool)).toEqual([
+      {
+        severity: 'info',
+        message: 'No obvious schema issues found for the subset supported by MCP Explorer.',
+      },
+    ]);
+  });
+
+  test('uses the first non-null type for nullable type arrays like SchemaForm', () => {
+    const nullableTool: ToolDef = {
+      name: 'nullable_tool',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          count: {
+            type: ['null', 'integer'],
+            minimum: 1,
+          },
+        },
+      },
+    };
+
+    expect(getSchemaLabRows(nullableTool)).toEqual([
+      {
+        name: 'count',
+        type: 'integer',
+        required: false,
+        description: undefined,
+        defaultValue: undefined,
+        enumValues: undefined,
+        minimum: 1,
+        maximum: undefined,
+      },
+    ]);
+    expect(generateExampleArgs(nullableTool)).toEqual({ count: 1 });
+    expect(validateToolSchema(nullableTool)).toEqual([
+      {
+        severity: 'info',
+        message: 'No obvious schema issues found for the subset supported by MCP Explorer.',
+      },
+    ]);
+  });
+
+  test('returns an info issue when no obvious schema issues are found', () => {
+    expect(validateToolSchema(tool)).toEqual([
+      {
+        severity: 'info',
+        message: 'No obvious schema issues found for the subset supported by MCP Explorer.',
+      },
+    ]);
+  });
 });
