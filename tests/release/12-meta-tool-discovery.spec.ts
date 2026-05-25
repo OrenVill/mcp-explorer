@@ -10,7 +10,7 @@ test.describe.serial('§3.12 — Meta-tool discovery', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
   });
 
   test.afterAll(() => ctx.close());

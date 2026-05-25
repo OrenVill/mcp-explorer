@@ -1,5 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
-import { setupVault, addFixtureServer, VAULT_PASS } from './helpers';
+import { setupVault, addFixtureServer, waitForConnected, VAULT_PASS } from './helpers';
 
 test.describe.serial('§3.9 — Bookmarks persistence', () => {
   let ctx: BrowserContext;
@@ -10,8 +10,8 @@ test.describe.serial('§3.9 — Bookmarks persistence', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
   });
 
@@ -57,8 +57,15 @@ test.describe.serial('§3.9 — Bookmarks persistence', () => {
     }
 
     await page.locator('aside li').filter({ hasText: 'Fixture' }).click();
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    // After vault unlock servers restore as disconnected — click Connect if needed
+    const connectBtn = page.locator('aside li').filter({ hasText: 'Fixture' })
+      .getByRole('button', { name: /^connect$/i });
+    if (await connectBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await connectBtn.click();
+    }
+    await waitForConnected(page, 'Fixture');
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
 
     const bookmarkBtnAfter = page

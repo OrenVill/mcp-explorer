@@ -1,11 +1,13 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
-import { VAULT_PASS } from './helpers';
+import { VAULT_PASS, resetVaultStorage } from './helpers';
 
 test.describe.serial('§3.1 — Initial load / empty state', () => {
   let ctx: BrowserContext;
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
+    // Wipe the server-side vault file so the app shows the Create vault screen
+    await resetVaultStorage();
     ctx = await browser.newContext();
     page = await ctx.newPage();
   });
@@ -18,7 +20,7 @@ test.describe.serial('§3.1 — Initial load / empty state', () => {
   });
 
   test('sidebar visible with no servers listed and + Add button present after vault creation', async () => {
-    await page.getByLabel('Passphrase').fill(VAULT_PASS);
+    await page.getByLabel('Passphrase', { exact: true }).fill(VAULT_PASS);
     await page.getByLabel('Confirm passphrase').fill(VAULT_PASS);
     await page.getByRole('button', { name: 'Create vault' }).click();
     await page.getByText('No servers yet').waitFor({ timeout: 10_000 });

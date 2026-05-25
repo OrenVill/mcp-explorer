@@ -10,8 +10,8 @@ test.describe.serial('§3.16 — Replay Suites', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    const toolItems = page.locator('ul li').filter({ hasText: /./ });
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    const toolItems = page.locator('aside + aside ul li').filter({ hasText: /./ });
 
     async function invokeCurrentTool() {
       const textInputs = page.locator('input[type="text"], input:not([type])');
@@ -43,7 +43,7 @@ test.describe.serial('§3.16 — Replay Suites', () => {
     await page.screenshot({ path: 'test-results/16-replay-suites.png', fullPage: true });
 
     await expect(page.locator('text=/successful/i').first()).toBeVisible({ timeout: 5_000 });
-    const callItems = page.locator('[class*="call"] li, [class*="suite"] li').filter({ hasText: /./ });
+    const callItems = page.getByRole('button', { name: /add to suite/i });
     await expect(callItems.first()).toBeVisible({ timeout: 3_000 });
   });
 
@@ -78,7 +78,7 @@ test.describe.serial('§3.16 — Replay Suites', () => {
     await page.waitForTimeout(300);
     await openDevTools(page, 'Replay Suites');
 
-    const callItems = page.locator('[class*="call"] li, [class*="suite"] li').filter({ hasText: /./ });
+    const callItems = page.getByRole('button', { name: /add to suite/i });
     if (await callItems.first().isVisible({ timeout: 2_000 }).catch(() => false)) {
       await expect(callItems.first()).toBeVisible();
     }
@@ -99,7 +99,7 @@ test.describe.serial('§3.16 — Replay Suites', () => {
     await openDevTools(page, 'Replay Suites');
     await page.screenshot({ path: 'test-results/16-after-reload.png', fullPage: true });
 
-    const callItems = page.locator('[class*="call"] li, [class*="suite"] li').filter({ hasText: /./ });
+    const callItems = page.getByRole('button', { name: /add to suite/i });
     const count = await callItems.count();
     expect(count).toBe(0);
     await page.keyboard.press('Escape');

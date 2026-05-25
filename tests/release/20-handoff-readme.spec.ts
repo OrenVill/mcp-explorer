@@ -23,8 +23,8 @@ test.describe.serial('§3.20 — Handoff README Export', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
     const submitBtn = page.getByRole('button', { name: /run|submit|invoke|call/i }).first();
     if (await submitBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {

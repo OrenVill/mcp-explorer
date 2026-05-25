@@ -14,8 +14,8 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
     await addServer(page, 'Fixture', FIXTURE_URL);
     await waitForConnected(page, 'Fixture');
     await selectServer(page, 'Fixture');
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
     const submitBtn = page.getByRole('button', { name: /run|submit|invoke|call/i }).first();
     if (await submitBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
@@ -30,19 +30,19 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
     await openDevTools(page, 'Protocol Inspector');
     await page.screenshot({ path: 'test-results/15-protocol-inspector.png', fullPage: true });
 
-    const entries = page.locator('[class*="timeline"] li, [class*="entry"], [class*="trace"]').filter({ hasText: /./ });
+    const entries = page.locator('span.font-mono').filter({ hasText: /initialize|tools\// });
     await expect(entries.first()).toBeVisible({ timeout: 5_000 });
   });
 
   test('clicking Clear returns to empty state', async () => {
-    const clearBtn = page.getByRole('button', { name: /clear/i }).first();
+    const clearBtn = page.getByRole('button', { name: 'Clear', exact: true }).first();
     await expect(clearBtn).toBeVisible({ timeout: 3_000 });
     await clearBtn.click();
     await page.waitForTimeout(300);
 
     await page.screenshot({ path: 'test-results/15-cleared.png', fullPage: true });
 
-    const entries = page.locator('[class*="timeline"] li, [class*="entry"], [class*="trace"]').filter({ hasText: /./ });
+    const entries = page.locator('span.font-mono').filter({ hasText: /initialize|tools\// });
     await expect(entries.first()).not.toBeVisible({ timeout: 2_000 });
   });
 
@@ -58,8 +58,8 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
     await waitForConnected(page, 'Fixture');
 
     await selectServer(page, 'Fixture');
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
     const submitBtn = page.getByRole('button', { name: /run|submit|invoke|call/i }).first();
     if (await submitBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
@@ -76,7 +76,7 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
   });
 
   test('clicking a timeline entry shows params, result, status, server, timestamp, duration', async () => {
-    const entry = page.locator('[class*="timeline"] li, [class*="entry"], [class*="trace"]').filter({ hasText: /./ }).first();
+    const entry = page.locator('span.font-mono').filter({ hasText: /initialize|tools\// }).first();
     await entry.click();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'test-results/15-entry-detail.png', fullPage: true });
@@ -107,7 +107,7 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
   });
 
   test('Select for diff shows side-by-side JSON diff of two entries', async () => {
-    const entries = page.locator('[class*="timeline"] li, [class*="entry"], [class*="trace"]').filter({ hasText: /./ });
+    const entries = page.locator('span.font-mono').filter({ hasText: /initialize|tools\// });
     const count = await entries.count();
 
     if (count >= 2) {
@@ -138,11 +138,11 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
   });
 
   test('Clear returns timeline to empty state', async () => {
-    const clearBtn = page.getByRole('button', { name: /clear/i }).first();
+    const clearBtn = page.getByRole('button', { name: 'Clear', exact: true }).first();
     await clearBtn.click();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'test-results/15-final-clear.png', fullPage: true });
-    const entries = page.locator('[class*="timeline"] li, [class*="entry"], [class*="trace"]').filter({ hasText: /./ });
+    const entries = page.locator('span.font-mono').filter({ hasText: /initialize|tools\// });
     await expect(entries.first()).not.toBeVisible({ timeout: 2_000 });
     await page.keyboard.press('Escape');
   });

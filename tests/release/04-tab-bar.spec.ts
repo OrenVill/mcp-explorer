@@ -1,5 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
-import { setupVault, addServer, waitForError, selectServer, UNREACHABLE_URL } from './helpers';
+import { setupVault, addFixtureServer } from './helpers';
 
 test.describe.serial('§3.4 — Tab bar — Tools / Resources / Prompts', () => {
   let ctx: BrowserContext;
@@ -9,19 +9,19 @@ test.describe.serial('§3.4 — Tab bar — Tools / Resources / Prompts', () => 
     ctx = await browser.newContext();
     page = await ctx.newPage();
     await setupVault(page);
-    await addServer(page, 'Test', UNREACHABLE_URL);
-    await waitForError(page, 'Test');
-    await selectServer(page, 'Test');
+    // Use the connected Fixture server — tab bar only renders for connected servers
+    await addFixtureServer(page);
   });
 
   test.afterAll(() => ctx.close());
 
   test('middle column shows Tools tab', async () => {
-    await expect(page.getByRole('button', { name: 'Tools' })).toBeVisible();
+    await page.screenshot({ path: 'test-results/04-tab-bar.png', fullPage: true });
+    await expect(page.getByRole('button', { name: /^Tools/ })).toBeVisible();
   });
 
   test('clicking Resources tab (if visible) renders without crashing', async () => {
-    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
     const jsErrors: string[] = [];
     page.once('pageerror', (err) => jsErrors.push(err.message));
     await page.waitForTimeout(500);

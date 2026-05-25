@@ -10,23 +10,23 @@ test.describe.serial('§3.18 — Agent Readiness', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
   });
 
   test.afterAll(() => ctx.close());
 
   test('each tool row in tool list shows a readiness score badge', async () => {
     await page.screenshot({ path: 'test-results/18-tool-list-badges.png', fullPage: true });
-    const scoreBadge = page.locator('[class*="badge"], [class*="score"], [class*="readiness"]').first();
+    const scoreBadge = page.locator('[title*="Agent Readiness"]').first();
     await expect(scoreBadge).toBeVisible({ timeout: 5_000 });
   });
 
   test('tool detail header shows readiness score for selected tool', async () => {
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'test-results/18-tool-detail-score.png', fullPage: true });
 
-    const detailScore = page.locator('[class*="badge"], [class*="score"], [class*="readiness"]').first();
+    const detailScore = page.locator('[title*="Agent Readiness"]').first();
     await expect(detailScore).toBeVisible({ timeout: 3_000 });
   });
 

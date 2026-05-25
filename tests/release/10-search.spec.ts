@@ -11,8 +11,8 @@ test.describe.serial('§3.10 — Cross-server search', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    const firstTool = page.locator('ul li').filter({ hasText: /./ }).first();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    const firstTool = page.locator('aside + aside ul li').filter({ hasText: /./ }).first();
     firstToolName = (await firstTool.textContent() ?? '').trim().split('\n')[0].trim();
   });
 
@@ -29,12 +29,13 @@ test.describe.serial('§3.10 — Cross-server search', () => {
 
     await page.screenshot({ path: 'test-results/10-search-results.png', fullPage: true });
 
-    const results = page.locator('[class*="result"], [class*="search"] li, [role="option"]');
+    // GlobalSearch shows results as <ul> > <li> > <button> rows inside the search modal
+    const results = page.locator('ul li button').filter({ hasText: /./ });
     await expect(results.first()).toBeVisible({ timeout: 3_000 });
   });
 
   test('results come from the correct server', async () => {
-    const results = page.locator('[class*="result"], [role="option"]');
+    const results = page.locator('ul li button').filter({ hasText: /./ });
     const count = await results.count();
     if (count > 0) {
       const text = await results.first().textContent() ?? '';

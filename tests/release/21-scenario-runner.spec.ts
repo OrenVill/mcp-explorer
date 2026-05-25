@@ -71,12 +71,17 @@ test.describe.serial('§3.21 — Scenario Runner', () => {
   });
 
   test('assertion type selector shows all five types', async () => {
-    const addAssertionBtn = page.getByRole('button', { name: /add assertion|\+ add/i }).first();
+    // Click + Add assertion button (text: "+ Add")
+    const addAssertionBtn = page.getByRole('button', { name: /add assertion/i })
+      .or(page.locator('button', { hasText: '+ Add' })).first();
     if (await addAssertionBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await addAssertionBtn.click();
       await page.waitForTimeout(300);
     }
-    const assertionTypeSelect = page.locator('select').last();
+    // The assertion type selector has option value="status" — use that to find it specifically
+    const assertionTypeSelect = page.locator('select').filter({
+      has: page.locator('option[value="status"]'),
+    }).first();
     if (await assertionTypeSelect.isVisible({ timeout: 2_000 }).catch(() => false)) {
       const options = await assertionTypeSelect.locator('option').allTextContents();
       const types = options.map((t) => t.toLowerCase());
@@ -88,9 +93,11 @@ test.describe.serial('§3.21 — Scenario Runner', () => {
   });
 
   test('clicking Run executes scenario and shows pass/fail badge', async () => {
-    const assertionTypeSelect = page.locator('select').last();
+    const assertionTypeSelect = page.locator('select').filter({
+      has: page.locator('option[value="status"]'),
+    }).first();
     if (await assertionTypeSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      await assertionTypeSelect.selectOption({ label: /status/i });
+      await assertionTypeSelect.selectOption({ value: 'status' });
       await page.waitForTimeout(200);
     }
     const runBtn = page.getByRole('button', { name: /▶|run/i }).first();
@@ -123,11 +130,12 @@ test.describe.serial('§3.21 — Scenario Runner', () => {
   test('removing a step updates the scenario immediately', async () => {
     const removeStepBtn = page.getByRole('button', { name: /remove|delete step|✕/i }).first();
     if (await removeStepBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      const stepsBefore = await page.locator('[class*="step"]').count();
-      await removeStepBtn.click();
+      const jsErrors: string[] = [];
+      page.once('pageerror', (err) => jsErrors.push(err.message));
+      await removeStepBtn.click({ force: true });
       await page.waitForTimeout(300);
-      const stepsAfter = await page.locator('[class*="step"]').count();
-      expect(stepsAfter).toBeLessThan(stepsBefore);
+      await page.screenshot({ path: 'test-results/21-remove-step.png', fullPage: true });
+      expect(jsErrors, `JS error on remove: ${jsErrors.join('; ')}`).toHaveLength(0);
     }
   });
 

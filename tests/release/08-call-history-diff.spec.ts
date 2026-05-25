@@ -10,8 +10,8 @@ test.describe.serial('§3.8 — Call history — semantic diff', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    const toolItems = page.locator('ul li').filter({ hasText: /./ });
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    const toolItems = page.locator('aside + aside ul li').filter({ hasText: /./ });
     await toolItems.first().click();
     await page.waitForTimeout(300);
 

@@ -10,8 +10,8 @@ test.describe.serial('§3.11 — Export / documentation generation', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
     const submitBtn = page.getByRole('button', { name: /run|submit|invoke|call/i }).first();
     if (await submitBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
@@ -29,8 +29,8 @@ test.describe.serial('§3.11 — Export / documentation generation', () => {
 
     await page.screenshot({ path: 'test-results/11-export-dialog.png', fullPage: true });
 
-    const dialog = page.getByRole('dialog').or(page.locator('[class*="modal"], [class*="dialog"]')).first();
-    await expect(dialog).toBeVisible({ timeout: 3_000 });
+    // ExportDialog is a fixed overlay with an h2 heading — no role="dialog"
+    await expect(page.getByRole('heading', { name: /Export/i }).first()).toBeVisible({ timeout: 3_000 });
   });
 
   test('download/copy button present and triggers without JS error', async () => {

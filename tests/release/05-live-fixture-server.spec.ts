@@ -20,8 +20,10 @@ test.describe.serial('§3.5 — Live MCP fixture server', () => {
   });
 
   test('tools list is non-empty', async () => {
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await expect(page.locator('text=/\\d+ tool/i').or(page.locator('[class*="tool"]').first())).toBeVisible({ timeout: 5_000 });
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.screenshot({ path: 'test-results/05-tools-list.png', fullPage: true });
+    // At least one tool item should be listed
+    await expect(page.locator('aside + aside ul li').filter({ hasText: /./ }).first()).toBeVisible({ timeout: 5_000 });
   });
 
   test('Resources tab appears and is non-empty', async () => {
@@ -30,7 +32,7 @@ test.describe.serial('§3.5 — Live MCP fixture server', () => {
     await resourcesTab.click();
     await page.screenshot({ path: 'test-results/05-resources-tab.png', fullPage: true });
     // At least one resource item listed
-    const resourceItems = page.locator('ul li').filter({ hasText: /./ });
+    const resourceItems = page.locator('aside + aside ul li').filter({ hasText: /./ });
     await expect(resourceItems.first()).toBeVisible({ timeout: 5_000 });
   });
 
@@ -40,7 +42,7 @@ test.describe.serial('§3.5 — Live MCP fixture server', () => {
     await promptsTab.click();
     await page.screenshot({ path: 'test-results/05-prompts-tab.png', fullPage: true });
     // At least one prompt listed
-    const promptItems = page.locator('ul li').filter({ hasText: /./ });
+    const promptItems = page.locator('aside + aside ul li').filter({ hasText: /./ });
     await expect(promptItems.first()).toBeVisible({ timeout: 5_000 });
   });
 });

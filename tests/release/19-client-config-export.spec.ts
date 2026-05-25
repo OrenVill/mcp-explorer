@@ -23,8 +23,8 @@ test.describe.serial('§3.19 — MCP Client Config Export', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
   });
 

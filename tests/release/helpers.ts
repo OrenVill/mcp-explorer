@@ -4,15 +4,23 @@ export const VAULT_PASS = 'test-release-pass-123';
 export const FIXTURE_URL = 'http://localhost:3001/mcp';
 export const UNREACHABLE_URL = 'http://localhost:9999/mcp';
 
+/** Delete the server-side vault file so the next page load shows the Create vault screen. */
+export async function resetVaultStorage(): Promise<void> {
+  await fetch('http://127.0.0.1:4173/__vault_storage', { method: 'DELETE' });
+}
+
 export async function setupVault(page: Page): Promise<void> {
+  // Always wipe the vault file first so every spec gets a clean, empty vault.
+  // The DELETE endpoint returns 204 even when no file exists, so this is safe.
+  await resetVaultStorage();
   await page.goto('/');
-  const heading = page.getByRole('heading', { name: 'Create vault' });
-  if (await heading.isVisible({ timeout: 5_000 }).catch(() => false)) {
-    await page.getByLabel('Passphrase').fill(VAULT_PASS);
-    await page.getByLabel('Confirm passphrase').fill(VAULT_PASS);
-    await page.getByRole('button', { name: 'Create vault' }).click();
-  }
-  await page.getByText('No servers yet').waitFor({ timeout: 10_000 });
+  // The page always shows Create vault after a reset
+  // Use exact:true so "Passphrase" doesn't also match "Confirm passphrase"
+  await page.getByLabel('Passphrase', { exact: true }).fill(VAULT_PASS);
+  await page.getByLabel('Confirm passphrase').fill(VAULT_PASS);
+  await page.getByRole('button', { name: 'Create vault' }).click();
+  // Wait for main UI — the Add button is always in the sidebar after vault creation
+  await page.getByRole('button', { name: 'Add' }).waitFor({ timeout: 10_000 });
 }
 
 export async function addServer(

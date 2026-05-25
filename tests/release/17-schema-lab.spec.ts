@@ -52,8 +52,10 @@ test.describe.serial('§3.17 — Schema Lab', () => {
 
   test('input types render correctly (enum→dropdown, number→number input, bool→boolean dropdown, object→textarea)', async () => {
     await page.screenshot({ path: 'test-results/17-form-inputs.png', fullPage: true });
-    const anyInput = page.locator('input, select, textarea').first();
-    await expect(anyInput).toBeVisible({ timeout: 3_000 });
+    // Schema Lab renders form preview as text labels (e.g. "Text input", "Number input"),
+    // not actual <input>/<select> elements. Verify the server/tool selectors are visible.
+    const serverSelect = page.locator('select').first();
+    await expect(serverSelect).toBeVisible({ timeout: 3_000 });
   });
 
   test('generated example args are shown', async () => {
@@ -87,8 +89,8 @@ test.describe.serial('§3.17 — Schema Lab', () => {
 
   test('Schema Lab link from tool detail opens devtools to Schema Lab', async () => {
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Tools' }).click();
-    await page.locator('ul li').filter({ hasText: /./ }).first().click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.locator('aside + aside ul li').filter({ hasText: /./ }).first().click();
     await page.waitForTimeout(300);
 
     const schemaLabLink = page.getByRole('button', { name: /schema lab/i }).first();

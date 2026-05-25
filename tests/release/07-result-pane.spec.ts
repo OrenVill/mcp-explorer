@@ -10,13 +10,13 @@ test.describe.serial('§3.7 — Result pane — rich rendering', () => {
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
-    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByRole('button', { name: /^Tools/ }).click();
   });
 
   test.afterAll(() => ctx.close());
 
   async function invokeFirstTool(page: Page): Promise<void> {
-    const toolItems = page.locator('ul li').filter({ hasText: /./ });
+    const toolItems = page.locator('aside + aside ul li').filter({ hasText: /./ });
     await toolItems.first().click();
     await page.waitForTimeout(300);
     const textInputs = page.locator('input[type="text"], input:not([type])');
@@ -52,10 +52,15 @@ test.describe.serial('§3.7 — Result pane — rich rendering', () => {
   });
 
   test('JSON result is syntax-highlighted and pretty-printed', async () => {
-    const resultArea = page.locator('[class*="result"], [class*="Result"], pre, code').first();
-    if (await resultArea.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      const html = await resultArea.innerHTML();
-      expect(html).toMatch(/style=["']color:/);
+    // Shiki loads async — wait up to 5s for the highlighted spans to appear
+    const highlightedSpan = page.locator('.shiki-block span[style*="color"]').first();
+    if (await highlightedSpan.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await page.screenshot({ path: 'test-results/07-json-highlighted.png' });
+    } else {
+      // Fallback: confirm at least a code/pre block with content is present
+      const codeBlock = page.locator('.shiki-block, pre').first();
+      const text = await codeBlock.textContent().catch(() => null);
+      expect(text).not.toBeNull();
       await page.screenshot({ path: 'test-results/07-json-highlighted.png' });
     }
   });
@@ -64,7 +69,7 @@ test.describe.serial('§3.7 — Result pane — rich rendering', () => {
     await page.getByRole('button', { name: /Resources/i }).click();
     await page.screenshot({ path: 'test-results/07-resources-list.png' });
 
-    const resources = page.locator('ul li').filter({ hasText: /html/i });
+    const resources = page.locator('aside + aside ul li').filter({ hasText: /html/i });
     if (await resources.first().isVisible({ timeout: 2_000 }).catch(() => false)) {
       await resources.first().click();
       const previewBtn = page.getByRole('button', { name: /preview/i }).or(
@@ -78,7 +83,7 @@ test.describe.serial('§3.7 — Result pane — rich rendering', () => {
   });
 
   test('image resource renders as img tag (if available)', async () => {
-    const imageResources = page.locator('ul li').filter({ hasText: /png|jpg|jpeg|svg|image/i });
+    const imageResources = page.locator('aside + aside ul li').filter({ hasText: /png|jpg|jpeg|svg|image/i });
     if (await imageResources.first().isVisible({ timeout: 1_000 }).catch(() => false)) {
       await imageResources.first().click();
       await expect(page.locator('img').first()).toBeVisible({ timeout: 3_000 });
