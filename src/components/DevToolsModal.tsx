@@ -83,15 +83,16 @@ function DevToolsModalContent({
         </div>
 
         <div className="flex-1 min-h-0">
-          {activeTab === 'protocol' ? (
+          <div hidden={activeTab !== 'protocol'} className="h-full min-h-0">
             <ProtocolInspectorPanel servers={servers} />
-          ) : (
+          </div>
+          <div hidden={activeTab !== 'schema'} className="h-full min-h-0">
             <SchemaLabPanel
               servers={servers}
               selectedServerId={selectedServerId}
               selectedToolName={selectedToolName}
             />
-          )}
+          </div>
         </div>
       </div>
     </div>
