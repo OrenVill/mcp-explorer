@@ -190,6 +190,18 @@ Tests the rich code rendering added in v0.6.0. Requires a connected server with 
 - Click **Copy event** and confirm the clipboard receives JSON for the selected event.
 - Click **Clear** and confirm the timeline returns to the empty state.
 
+### 3.16 Schema Lab
+
+- Click **Dev Tools** in the top header and switch to the **Schema Lab** tab.
+- Confirm Schema Lab shows connected server and tool selectors.
+- Select a tool with required arguments and confirm required fields are highlighted in the parameter table.
+- Confirm the schema summary shows root type, property count, required count, and optional count.
+- Confirm validation notes render. A valid schema should show a positive/info note; malformed or unsupported schema shapes should show warning/error notes without crashing.
+- Confirm generated example arguments are deterministic and match defaults, enum first values, and primitive fallback values.
+- Click **Copy args** and confirm the clipboard receives JSON arguments.
+- Click **Copy call** and confirm the clipboard receives a JSON-RPC `tools/call` payload with `method`, `params.name`, and `params.arguments`.
+- From a selected tool detail page, click **Schema Lab** beside Arguments and confirm Dev Tools opens directly to Schema Lab for that tool.
+
 ---
 
 ## 4. CHANGELOG and version
