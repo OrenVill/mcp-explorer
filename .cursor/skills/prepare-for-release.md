@@ -1,11 +1,11 @@
 ---
+name: prepare-for-release
 description: Pre-release checklist for mcp-explorer. Run before merging the release-please PR or triggering npm publish. Covers build, tests, lint, and a detailed Playwright UI walkthrough.
-alwaysApply: false
 ---
 
 # Pre-Release Checklist — mcp-explorer
 
-Use this rule before merging the release-please PR or publishing to npm.
+Use this skill before merging the release-please PR or publishing to npm.
 Work through every section in order. Do not mark the release ready until all sections pass.
 
 ---
@@ -58,7 +58,7 @@ npm publish --dry-run
 Confirm:
 - The tarball lists `dist/`, `bin/`, `server.js`, `README.md`.
 - `README.md` in the tarball starts with the npm-focused install instructions (NOT the full GitHub README with a Layout section). This confirms the `prepublishOnly` swap script fired.
-- No unexpected files (no `.claude/`, no `.cursor/`, no `src/`, no `*.local`, no `.env`).
+- No unexpected files (no `.claude/`, no `src/`, no `*.local`, no `.env`).
 
 After the dry run completes, the `postpublish` script should have restored `README.md` to the GitHub variant. Verify:
 
@@ -72,7 +72,7 @@ head -20 README.md   # should show the full GitHub README, not the npm one
 
 Start the built server (`mcp-explorer --no-open`, port 4173) — prefer this over the Vite dev server since it's what users actually install.
 
-Use Playwright to drive the browser. Work through each area below. For each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
+Use the Playwright MCP tools (the `playwright` server configured globally). Work through each area below. For each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
 
 ### 4.1 Initial load / empty state
 
