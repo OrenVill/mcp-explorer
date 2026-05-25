@@ -20,7 +20,7 @@ test.describe.serial('§3.4 — Tab bar — Tools / Resources / Prompts', () => 
     await expect(page.getByRole('button', { name: 'Tools' })).toBeVisible();
   });
 
-  test('clicking Tools tab renders without crashing', async () => {
+  test('clicking Resources tab (if visible) renders without crashing', async () => {
     await page.getByRole('button', { name: 'Tools' }).click();
     const jsErrors: string[] = [];
     page.once('pageerror', (err) => jsErrors.push(err.message));
