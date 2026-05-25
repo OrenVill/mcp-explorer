@@ -6,7 +6,9 @@ test.describe.serial('§3.17 — Schema Lab', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    ctx = await browser.newContext();
+    ctx = await browser.newContext({
+      permissions: ['clipboard-read', 'clipboard-write'],
+    });
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);

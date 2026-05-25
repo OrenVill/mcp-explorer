@@ -6,7 +6,9 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    ctx = await browser.newContext();
+    ctx = await browser.newContext({
+      permissions: ['clipboard-read', 'clipboard-write'],
+    });
     page = await ctx.newPage();
     await setupVault(page);
     await addServer(page, 'Fixture', FIXTURE_URL);
@@ -89,7 +91,8 @@ test.describe.serial('§3.15 — Protocol Inspector', () => {
     if (await unsupportedText.isVisible({ timeout: 1_000 }).catch(() => false)) {
       await expect(unsupportedText).toBeVisible();
     }
-    await expect(errorText).not.toBeVisible({ timeout: 1_000 }).catch(() => {});
+    // If the locator has no matches at all it resolves as not visible — safe to assert directly
+    await expect(errorText).not.toBeVisible({ timeout: 1_000 });
   });
 
   test('Copy event puts JSON in clipboard', async () => {

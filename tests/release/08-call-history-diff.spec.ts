@@ -56,8 +56,8 @@ test.describe.serial('§3.8 — Call history — semantic diff', () => {
 
       await page.screenshot({ path: 'test-results/08-semantic-diff.png', fullPage: true });
 
-      const rawDiffMarkers = page.locator('text=+++ , text=--- ').first();
-      await expect(rawDiffMarkers).not.toBeVisible();
+      await expect(page.locator('text=+++ ')).not.toBeVisible();
+      await expect(page.locator('text=--- ')).not.toBeVisible();
     }
   });
 });

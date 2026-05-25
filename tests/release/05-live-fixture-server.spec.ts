@@ -29,12 +29,18 @@ test.describe.serial('§3.5 — Live MCP fixture server', () => {
     await expect(resourcesTab).toBeVisible({ timeout: 5_000 });
     await resourcesTab.click();
     await page.screenshot({ path: 'test-results/05-resources-tab.png', fullPage: true });
+    // At least one resource item listed
+    const resourceItems = page.locator('ul li').filter({ hasText: /./ });
+    await expect(resourceItems.first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test('Prompts tab appears', async () => {
+  test('Prompts tab appears and lists prompts', async () => {
     const promptsTab = page.getByRole('button', { name: /Prompts/i });
     await expect(promptsTab).toBeVisible({ timeout: 5_000 });
     await promptsTab.click();
     await page.screenshot({ path: 'test-results/05-prompts-tab.png', fullPage: true });
+    // At least one prompt listed
+    const promptItems = page.locator('ul li').filter({ hasText: /./ });
+    await expect(promptItems.first()).toBeVisible({ timeout: 5_000 });
   });
 });

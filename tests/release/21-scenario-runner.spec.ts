@@ -29,10 +29,16 @@ test.describe.serial('§3.21 — Scenario Runner', () => {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
     } else {
+      // nameInput not found — try a dedicated Add button instead
       const addBtn = page.getByRole('button', { name: /\+|add scenario/i }).first();
-      await nameInput.fill('Release Test');
-      await addBtn.click();
-      await page.waitForTimeout(300);
+      if (await addBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await addBtn.click();
+        await page.waitForTimeout(300);
+        const input = page.locator('input').first();
+        await input.fill('Release Test');
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+      }
     }
     await page.screenshot({ path: 'test-results/21-scenario-created.png', fullPage: true });
     await expect(page.locator('text=Release Test').first()).toBeVisible({ timeout: 3_000 });

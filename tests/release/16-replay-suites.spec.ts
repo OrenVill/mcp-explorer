@@ -1,5 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
-import { setupVault, addFixtureServer, openDevTools } from './helpers';
+import { setupVault, addFixtureServer, openDevTools, VAULT_PASS } from './helpers';
 
 test.describe.serial('§3.16 — Replay Suites', () => {
   let ctx: BrowserContext;
@@ -91,7 +91,7 @@ test.describe.serial('§3.16 — Replay Suites', () => {
 
     const unlockBtn = page.getByRole('button', { name: /unlock/i });
     if (await unlockBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await page.getByLabel('Passphrase').fill('test-release-pass-123');
+      await page.getByLabel('Passphrase').fill(VAULT_PASS);
       await unlockBtn.click();
       await page.waitForTimeout(1_000);
     }

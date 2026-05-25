@@ -17,7 +17,9 @@ test.describe.serial('§3.19 — MCP Client Config Export', () => {
   }
 
   test.beforeAll(async ({ browser }) => {
-    ctx = await browser.newContext();
+    ctx = await browser.newContext({
+      permissions: ['clipboard-read', 'clipboard-write'],
+    });
     page = await ctx.newPage();
     await setupVault(page);
     await addFixtureServer(page);
