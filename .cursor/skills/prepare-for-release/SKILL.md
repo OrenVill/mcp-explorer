@@ -181,10 +181,10 @@ Tests the rich code rendering added in v0.6.0. Requires a connected server with 
 
 ### 3.15 Protocol Inspector
 
-- Click the **Inspector** button in the top header.
-- Confirm the Protocol Inspector opens as a modal and shows an empty state before any MCP calls are made.
+- Click **Dev Tools** in the top header and stay on the **Protocol Inspector** tab.
+- Confirm the Protocol Inspector tab shows an empty state before any MCP calls are made.
 - Connect to the live fixture server, invoke a tool, read a resource, and fetch a prompt.
-- Reopen Inspector and confirm the timeline includes entries for `initialize`, `tools/list`, `tools/call`, `resources/list` / `resources/read`, and `prompts/list` / `prompts/get` as applicable.
+- Reopen Dev Tools → Protocol Inspector and confirm the timeline includes entries for `initialize`, `tools/list`, `tools/call`, `resources/list` / `resources/read`, and `prompts/list` / `prompts/get` as applicable.
 - Click a timeline entry and confirm params, result or error, status, server name, timestamp, and duration render without crashing.
 - If the connected server does not implement resources or prompts, confirm `resources/list` and/or `prompts/list` show as `unsupported`, not `error`; this means the server is healthy but that optional MCP capability is absent.
 - Click **Copy event** and confirm the clipboard receives JSON for the selected event.
