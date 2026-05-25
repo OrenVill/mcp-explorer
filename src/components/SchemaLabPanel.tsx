@@ -139,7 +139,7 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
 
   if (connectedServers.length === 0) {
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-950">
+      <div className="h-full min-h-0 overflow-y-auto bg-zinc-950">
         <EmptyState
           title="Connect a server to inspect tool schemas."
           body="Schema Lab works from the tools advertised by connected MCP servers."
@@ -160,7 +160,7 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
   const description = (tool?.description ?? '').trim();
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-950">
+    <div className="h-full min-h-0 overflow-y-auto bg-zinc-950">
       <div className="max-w-6xl mx-auto px-5 py-5 space-y-5">
         <section className="grid gap-3 md:grid-cols-2">
           <label className="block">

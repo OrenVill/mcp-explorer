@@ -82,11 +82,11 @@ function DevToolsModalContent({
           ))}
         </div>
 
-        <div className="flex-1 min-h-0">
-          <div hidden={activeTab !== 'protocol'} className="h-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div hidden={activeTab !== 'protocol'} className="h-full min-h-0 overflow-hidden">
             <ProtocolInspectorPanel servers={servers} />
           </div>
-          <div hidden={activeTab !== 'schema'} className="h-full min-h-0">
+          <div hidden={activeTab !== 'schema'} className="h-full min-h-0 overflow-hidden">
             <SchemaLabPanel
               servers={servers}
               selectedServerId={selectedServerId}
