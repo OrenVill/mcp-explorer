@@ -68,11 +68,11 @@ head -20 README.md   # should show the full GitHub README, not the npm one
 
 ---
 
-## 4. Browser UI walkthrough
+## 4. Playwright UI walkthrough
 
 Start the built server (`mcp-explorer --no-open`, port 4173) — prefer this over the Vite dev server since it's what users actually install.
 
-Use the browser automation tools available in the current agent environment. Work through each area below; for each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
+Use the Playwright MCP tools (the `playwright` server configured globally). Work through each area below. For each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
 
 ### 4.1 Initial load / empty state
 

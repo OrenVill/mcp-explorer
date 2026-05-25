@@ -1,6 +1,6 @@
 ---
 name: prepare-for-release
-description: Pre-release checklist for mcp-explorer. Run before merging the release-please PR or triggering npm publish. Covers build, tests, lint, and a detailed browser UI walkthrough.
+description: Pre-release checklist for mcp-explorer. Run before merging the release-please PR or triggering npm publish. Covers build, tests, lint, and a detailed Playwright UI walkthrough.
 ---
 
 # Pre-Release Checklist — mcp-explorer
@@ -49,11 +49,11 @@ Confirm the process exits cleanly and the lock file is removed (check `bin/mcp-e
 
 ---
 
-## 3. Browser UI walkthrough
+## 3. Playwright UI walkthrough
 
 Start the built server (`mcp-explorer --no-open`, port 4173) — prefer this over the Vite dev server since it's what users actually install.
 
-Use the browser automation tools available in the current agent environment. Work through each area below; for each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
+Use the Playwright MCP tools (the `playwright` server configured globally). Work through each area below. For each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
 
 ### 3.1 Initial load / empty state
 
