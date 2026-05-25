@@ -18,6 +18,12 @@ interface Props {
   selectedToolName: string | null;
 }
 
+interface PanelSelection {
+  serverId: string | null;
+  toolName: string | null;
+  propKey: string;
+}
+
 const SELECT_CLASS =
   'mt-1 w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed';
 
@@ -35,15 +41,7 @@ function getAllTools(server: ServerEntry | null): ToolDef[] {
   return [...nativeTools, ...discoveredTools];
 }
 
-function getInitialServerId(connectedServers: ServerEntry[], selectedServerId: string | null): string {
-  if (selectedServerId && connectedServers.some((server) => server.id === selectedServerId)) {
-    return selectedServerId;
-  }
-
-  return connectedServers[0]?.id ?? '';
-}
-
-function getActiveServer(connectedServers: ServerEntry[], serverId: string): ServerEntry | null {
+function getActiveServer(connectedServers: ServerEntry[], serverId: string | null): ServerEntry | null {
   return connectedServers.find((server) => server.id === serverId) ?? connectedServers[0] ?? null;
 }
 
@@ -69,6 +67,10 @@ function issueClass(severity: SchemaLabIssue['severity']): string {
 
 function stringify(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+function copyText(value: string) {
+  void navigator.clipboard?.writeText(value).catch(() => {});
 }
 
 function formatDetail(value: unknown): string {
@@ -129,8 +131,11 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
 
 export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: Props) {
   const connectedServers = getConnectedServers(servers);
-  const [serverId, setServerId] = useState(() => getInitialServerId(connectedServers, selectedServerId));
-  const [toolName, setToolName] = useState(() => selectedToolName ?? '');
+  const propKey = `${selectedServerId ?? ''}\u0000${selectedToolName ?? ''}`;
+  const [panelSelection, setPanelSelection] = useState<PanelSelection | null>(null);
+  const userSelection = panelSelection?.propKey === propKey ? panelSelection : null;
+  const requestedServerId = userSelection?.serverId ?? selectedServerId;
+  const requestedToolName = userSelection?.toolName ?? selectedToolName;
 
   if (connectedServers.length === 0) {
     return (
@@ -143,9 +148,9 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
     );
   }
 
-  const activeServer = getActiveServer(connectedServers, serverId);
+  const activeServer = getActiveServer(connectedServers, requestedServerId);
   const tools = getAllTools(activeServer);
-  const tool = getSelectedTool(tools, toolName);
+  const tool = getSelectedTool(tools, requestedToolName ?? '');
 
   const summary = tool ? getSchemaLabSummary(tool) : null;
   const rows = tool ? getSchemaLabRows(tool) : [];
@@ -169,8 +174,11 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
                 const nextServer = getActiveServer(connectedServers, nextServerId);
                 const nextTools = getAllTools(nextServer);
 
-                setServerId(nextServerId);
-                setToolName(nextTools[0]?.name ?? '');
+                setPanelSelection({
+                  serverId: nextServerId,
+                  toolName: nextTools[0]?.name ?? null,
+                  propKey,
+                });
               }}
               className={SELECT_CLASS}
             >
@@ -188,7 +196,13 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
             </span>
             <select
               value={tool?.name ?? ''}
-              onChange={(event) => setToolName(event.target.value)}
+              onChange={(event) =>
+                setPanelSelection({
+                  serverId: activeServer?.id ?? null,
+                  toolName: event.target.value,
+                  propKey,
+                })
+              }
               disabled={tools.length === 0}
               className={`${SELECT_CLASS} font-mono`}
             >
@@ -332,7 +346,7 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
                   </h4>
                   <button
                     type="button"
-                    onClick={() => void navigator.clipboard?.writeText(stringify(exampleArgs))}
+                    onClick={() => copyText(stringify(exampleArgs))}
                     className="text-xs px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500 transition-colors"
                   >
                     Copy args
@@ -350,7 +364,7 @@ export function SchemaLabPanel({ servers, selectedServerId, selectedToolName }: 
                   </h4>
                   <button
                     type="button"
-                    onClick={() => void navigator.clipboard?.writeText(stringify(jsonRpcCall))}
+                    onClick={() => copyText(stringify(jsonRpcCall))}
                     className="text-xs px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500 transition-colors"
                   >
                     Copy call
