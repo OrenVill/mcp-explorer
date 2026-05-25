@@ -49,38 +49,19 @@ Confirm the process exits cleanly and the lock file is removed (check `bin/mcp-e
 
 ---
 
-## 3. npm publish dry run
-
-```bash
-npm publish --dry-run
-```
-
-Confirm:
-- The tarball lists `dist/`, `bin/`, `server.js`, `README.md`.
-- `README.md` in the tarball starts with the npm-focused install instructions (NOT the full GitHub README with a Layout section). This confirms the `prepublishOnly` swap script fired.
-- No unexpected files (no `.claude/`, no `src/`, no `*.local`, no `.env`).
-
-After the dry run completes, the `postpublish` script should have restored `README.md` to the GitHub variant. Verify:
-
-```bash
-head -20 README.md   # should show the full GitHub README, not the npm one
-```
-
----
-
-## 4. Playwright UI walkthrough
+## 3. Playwright UI walkthrough
 
 Start the built server (`mcp-explorer --no-open`, port 4173) — prefer this over the Vite dev server since it's what users actually install.
 
 Use the Playwright MCP tools (the `playwright` server configured globally). Work through each area below. For each item, navigate to the relevant part of the UI, take a screenshot, and confirm the described behavior before continuing.
 
-### 4.1 Initial load / empty state
+### 3.1 Initial load / empty state
 
 - Navigate to `http://127.0.0.1:4173/`.
 - Screenshot the full page.
 - Confirm: left sidebar visible with no servers listed, a `+ Add` button present, middle and right columns show empty-state copy (not blank or errored).
 
-### 4.2 Add Server dialog
+### 3.2 Add Server dialog
 
 - Click `+ Add`.
 - Screenshot the open dialog.
@@ -89,20 +70,29 @@ Use the Playwright MCP tools (the `playwright` server configured globally). Work
 - Submit the form.
 - Confirm: server appears in sidebar with a disconnected/error indicator — not a crash, not a blank state.
 
-### 4.3 Server connection error state
+### 3.3 Server connection error state
 
 - Click the `Test` server in the sidebar.
 - Confirm: app shows a connection-failed or disconnected state — an error message or a "Connect" button. No white screen, no unhandled exception.
 - Check the browser console for uncaught JS errors — there should be none.
 
-### 4.4 Tab bar — Tools / Resources / Prompts
+### 3.4 Tab bar — Tools / Resources / Prompts
 
 - After clicking the server, confirm the middle column shows a tab bar with at least **Tools**, **Resources**, and **Prompts** tabs.
 - Click each tab; confirm each renders without crashing (they may be empty since the server is unreachable).
 
-### 4.5 Tool forms — all input types
+### 3.5 Live MCP fixture server
 
-Requires a real connected MCP server. If none is available, note "not exercised — no live server" and skip to 4.6.
+For the full feature walkthrough, use the local fixture server at `http://localhost:3001/mcp`.
+
+- Add a server named `"Fixture"` with URL `http://localhost:3001/mcp`.
+- Confirm it connects successfully and lists tools, resources, and prompts.
+- Use this server for the tool form, result pane, call history, bookmarks, search, export, resources, and prompts checks below.
+- If port `3001` is not running, start the fixture server before continuing. Do not mark release ready without exercising this connected-server path.
+
+### 3.6 Tool forms — all input types
+
+Requires the live fixture server from 3.5. If it is unavailable, stop and report the blocker.
 
 With a connected server that lists tools:
 - **String param** → confirm a text `<input>` renders.
@@ -111,7 +101,7 @@ With a connected server that lists tools:
 - **Enum param** → confirm a `<select>` renders with the correct options.
 - **Object or array param** → confirm a **textarea** renders and accepts typed JSON. Type `{"key": "value"}` into it and confirm the characters appear. This was a bug fixed in v0.5.x — it is a regression risk.
 
-### 4.6 Result pane — rich rendering
+### 3.7 Result pane — rich rendering
 
 Tests the rich code rendering added in v0.6.0. Requires a connected server with invokable tools.
 
@@ -141,7 +131,7 @@ Tests the rich code rendering added in v0.6.0. Requires a connected server with 
 - Confirm the Shiki-highlighted code block renders inside the modal with colored tokens.
 - If the export has a Markdown tab, confirm the **Code / Preview toggle** appears in the tab bar, and Preview renders prose.
 
-### 4.7 Call history — semantic diff
+### 3.8 Call history — semantic diff
 
 - Invoke the same tool twice with slightly different arguments.
 - Open the call history panel (history icon or tab near the tool detail area).
@@ -149,40 +139,40 @@ Tests the rich code rendering added in v0.6.0. Requires a connected server with 
 - Confirm a **semantic diff** is shown: a 3-column layout (old value | path | new value), NOT a raw line-level text diff.
 - If arguments were identical, confirm it shows "no changes" or falls back gracefully rather than crashing.
 
-### 4.8 Bookmarks persistence
+### 3.9 Bookmarks persistence
 
 - Click the bookmark icon on any tool.
 - Confirm the icon changes state (bookmarked).
 - Reload the page (F5 / hard reload).
 - Confirm the bookmark persists — it is stored in compressed appData on disk, not just in memory.
 
-### 4.9 Cross-server search
+### 3.10 Cross-server search
 
 - If more than one server is connected, open the search UI and type a partial tool name.
 - Confirm results come back from the correct server(s).
 - With a single server, confirm search still filters the tool list correctly and doesn't crash.
 
-### 4.10 Export / documentation generation
+### 3.11 Export / documentation generation
 
 - With at least one tool invoked, open the Export dialog.
 - Confirm the dialog renders output tab(s).
 - Confirm the download/copy button is present and triggers without a JS error.
 
-### 4.11 Meta-tool discovery ("Discover all tools")
+### 3.12 Meta-tool discovery ("Discover all tools")
 
 - Connect to a server that exposes a meta-tool (`list_tools`, `search_tools`, `invoke_tool`, `get_manifest`, or similar).
 - Confirm the **"Discover all tools"** button appears in the tool list column.
 - Click it → confirm discovered tools appear in a collapsible section below the main list.
 - Click a discovered tool → confirm its detail form opens and is invokable (routes through the proxy meta-tool).
 
-### 4.12 Resources tab
+### 3.13 Resources tab
 
 - Navigate to the Resources tab on a connected server.
 - Confirm resources are listed with name and MIME type.
 - Click a text resource → ResourceDetail renders with correct content. For markdown or HTML content, the Code/Preview toggle must appear.
 - If the server has resource templates (URI templates), confirm the variable inputs render correctly.
 
-### 4.13 Prompts tab
+### 3.14 Prompts tab
 
 - Navigate to the Prompts tab on a connected server.
 - Confirm prompts are listed.
@@ -191,7 +181,7 @@ Tests the rich code rendering added in v0.6.0. Requires a connected server with 
 
 ---
 
-## 5. CHANGELOG and version
+## 4. CHANGELOG and version
 
 - Open `CHANGELOG.md` — confirm the top section matches the version being released and lists all merged PRs/commits since the last tag.
 - Open `package.json` — confirm `"version"` matches.
@@ -199,7 +189,7 @@ Tests the rich code rendering added in v0.6.0. Requires a connected server with 
 
 ---
 
-## 6. Final gate
+## 5. Final gate
 
 All of the above pass → merge the release-please PR. The GitHub Action will:
 1. Tag the commit (`vX.Y.Z`)
