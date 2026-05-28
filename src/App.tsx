@@ -230,13 +230,25 @@ export default function App() {
       if (transport === 'stdio') {
         const stdio = connection?.stdio ?? s?.stdio;
         const stdioEnv = connection?.stdioEnv ?? s?.stdioEnv ?? {};
-        if (!stdio?.command) return;
+        if (!stdio?.command) {
+          updateServer(id, {
+            status: 'error',
+            error: 'Stdio server is missing a command. Edit the server and set a command to run.',
+          });
+          return;
+        }
         tools = await connectStdio(id, stdio, stdioEnv);
       } else {
         const url = connection?.url ?? s?.url;
         const auth = connection !== undefined ? connection.auth : s?.auth;
         const proxyThroughLocal = connection?.proxyThroughLocal ?? s?.proxyThroughLocal ?? true;
-        if (!url) return;
+        if (!url) {
+          updateServer(id, {
+            status: 'error',
+            error: 'HTTP server is missing a URL. Edit the server and set an MCP endpoint URL.',
+          });
+          return;
+        }
         tools = await connect(id, url, auth, proxyThroughLocal);
       }
       const metaTools = detectMetaTools(tools);

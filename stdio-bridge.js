@@ -18,6 +18,21 @@ const ID_RE = /^[a-zA-Z0-9_-]+$/;
 const MAX_BODY_BYTES = 1_048_576;
 export const sessions = new Map();
 
+/** Reject non-loopback clients — stdio bridge can spawn arbitrary processes. */
+export function isLoopbackRequest(req) {
+  const remote = req.socket?.remoteAddress;
+  if (!remote) {
+    // Some local transports omit remoteAddress; allow only when Host is loopback.
+    const host = req.headers?.host?.split(':')[0] ?? '';
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  }
+  return (
+    remote === '127.0.0.1' ||
+    remote === '::1' ||
+    remote === '::ffff:127.0.0.1'
+  );
+}
+
 export function isValidServerId(id) {
   return typeof id === 'string' && ID_RE.test(id);
 }
@@ -157,6 +172,13 @@ export async function startSession(serverId, { command, args, cwd, env }) {
       facade,
       httpTransport,
       startedAt: Date.now(),
+      dead: false,
+    };
+    stdioTransport.onclose = () => {
+      session.dead = true;
+      if (sessions.get(serverId) === session) {
+        sessions.delete(serverId);
+      }
     };
     sessions.set(serverId, session);
     return session;
@@ -170,6 +192,12 @@ export async function startSession(serverId, { command, args, cwd, env }) {
 }
 
 export async function handleStdioBridge(req, res) {
+  if (!isLoopbackRequest(req)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Stdio bridge is only available on localhost');
+    return;
+  }
+
   const parsed = new URL(req.url ?? '/', 'http://placeholder.invalid');
   const route = parseStdioPath(parsed.pathname);
   if (!route || !isValidServerId(route.serverId)) {
@@ -222,9 +250,9 @@ export async function handleStdioBridge(req, res) {
 
   if (route.action === 'mcp' && (req.method === 'GET' || req.method === 'POST')) {
     const session = sessions.get(route.serverId);
-    if (!session) {
+    if (!session || session.dead) {
       res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Stdio session not started');
+      res.end(session?.dead ? 'Stdio process exited' : 'Stdio session not started');
       return;
     }
     try {

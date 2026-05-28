@@ -9,6 +9,17 @@ export function parseArgsLines(text: string): string[] {
     .filter((l) => l.length > 0);
 }
 
+export function hasDuplicateEnvKeys(rows: { key: string; value: string }[]): boolean {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = row.key.trim();
+    if (!key) continue;
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
 export function envRowsToMap(rows: { key: string; value: string }[]): {
   env: Record<string, string>;
   envKeys: string[];

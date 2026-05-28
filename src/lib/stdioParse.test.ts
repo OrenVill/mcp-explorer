@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseArgsLines, envRowsToMap, stdioBridgeMcpUrl } from './stdioParse';
+import { parseArgsLines, envRowsToMap, hasDuplicateEnvKeys, stdioBridgeMcpUrl } from './stdioParse';
 
 describe('parseArgsLines', () => {
   it('splits non-empty lines and trims', () => {
@@ -7,6 +7,18 @@ describe('parseArgsLines', () => {
   });
   it('returns empty array for blank textarea', () => {
     expect(parseArgsLines('  \n  ')).toEqual([]);
+  });
+});
+
+describe('hasDuplicateEnvKeys', () => {
+  it('detects duplicate keys', () => {
+    expect(
+      hasDuplicateEnvKeys([
+        { key: 'A', value: '1' },
+        { key: 'A', value: '2' },
+      ]),
+    ).toBe(true);
+    expect(hasDuplicateEnvKeys([{ key: 'A', value: '1' }])).toBe(false);
   });
 });
 

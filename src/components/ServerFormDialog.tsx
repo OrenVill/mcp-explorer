@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ServerAuth, ServerStdioConfig, ServerTransport } from '../types';
-import { envRowsToMap, parseArgsLines } from '../lib/stdioParse';
+import { envRowsToMap, hasDuplicateEnvKeys, parseArgsLines } from '../lib/stdioParse';
 
 export interface ServerFormValues {
   name: string;
@@ -261,6 +261,9 @@ export function ServerFormDialog({
       }
     } else if (!stdioCommandTrimmed) {
       setError('Command is required for stdio transport');
+      return;
+    } else if (hasDuplicateEnvKeys(stdioEnvRows)) {
+      setError('Environment variable names must be unique');
       return;
     }
     const externalError = validate?.(values);

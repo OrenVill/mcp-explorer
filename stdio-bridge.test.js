@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   STDIO_BRIDGE_PREFIX,
+  isLoopbackRequest,
   isValidServerId,
   parseStdioPath,
   startSession,
@@ -18,6 +19,12 @@ describe('stdio-bridge routing', () => {
   it('isValidServerId accepts slug ids', () => {
     expect(isValidServerId('fixture-server')).toBe(true);
     expect(isValidServerId('../etc')).toBe(false);
+  });
+
+  it('isLoopbackRequest allows loopback remote addresses', () => {
+    expect(isLoopbackRequest({ socket: { remoteAddress: '127.0.0.1' }, headers: {} })).toBe(true);
+    expect(isLoopbackRequest({ socket: { remoteAddress: '::1' }, headers: {} })).toBe(true);
+    expect(isLoopbackRequest({ socket: { remoteAddress: '10.0.0.5' }, headers: {} })).toBe(false);
   });
 
   it('parseStdioPath extracts action', () => {
