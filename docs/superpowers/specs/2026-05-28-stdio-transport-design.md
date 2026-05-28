@@ -1,7 +1,7 @@
 # Stdio MCP Transport — Design Spec
 
 **Date:** 2026-05-28  
-**Status:** Draft (awaiting review)  
+**Status:** Approved  
 **Branch:** `feat/stdio-transport` (implementation)
 
 ## Summary
