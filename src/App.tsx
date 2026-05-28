@@ -58,12 +58,6 @@ type ConnectOptions = {
   stdioEnv?: Record<string, string>;
 };
 
-type ExtendedServerFormValues = ServerFormValues & {
-  transport?: ServerTransport;
-  stdio?: ServerStdioConfig;
-  stdioEnv?: Record<string, string>;
-};
-
 function fromStoredServers(stored: StoredServer[]): ServerEntry[] {
   return stored.map((s) => ({
     id: s.id,
@@ -400,8 +394,7 @@ export default function App() {
   }
 
   function handleSubmit(values: ServerFormValues) {
-    const extended = values as ExtendedServerFormValues;
-    const transport = extended.transport ?? 'http';
+    const transport = values.transport ?? 'http';
     const isStdio = transport === 'stdio';
 
     if (dialogMode === 'add') {
@@ -415,8 +408,8 @@ export default function App() {
         auth: isStdio ? undefined : values.auth,
         proxyThroughLocal: isStdio ? undefined : values.proxyThroughLocal,
         transport,
-        stdio: extended.stdio,
-        stdioEnv: extended.stdioEnv,
+        stdio: values.stdio,
+        stdioEnv: values.stdioEnv,
         custom: true,
         status: 'disconnected',
       };
@@ -427,8 +420,8 @@ export default function App() {
         isStdio
           ? {
               transport: 'stdio',
-              stdio: extended.stdio,
-              stdioEnv: extended.stdioEnv,
+              stdio: values.stdio,
+              stdioEnv: values.stdioEnv,
             }
           : {
               url: values.url,
@@ -452,8 +445,8 @@ export default function App() {
         auth: isStdio ? undefined : values.auth,
         proxyThroughLocal: isStdio ? undefined : values.proxyThroughLocal,
         transport,
-        stdio: extended.stdio,
-        stdioEnv: extended.stdioEnv,
+        stdio: values.stdio,
+        stdioEnv: values.stdioEnv,
       });
       handleDialogClose();
       void handleConnect(
@@ -461,8 +454,8 @@ export default function App() {
         isStdio
           ? {
               transport: 'stdio',
-              stdio: extended.stdio,
-              stdioEnv: extended.stdioEnv,
+              stdio: values.stdio,
+              stdioEnv: values.stdioEnv,
             }
           : {
               url: values.url,
@@ -497,6 +490,15 @@ export default function App() {
     }
   }
 
+  function stdioEnvRowsForDialog(server: ServerEntry): { key: string; value: string }[] {
+    const env = server.stdioEnv ?? {};
+    const orderedKeys = server.stdio?.envKeys?.length
+      ? server.stdio.envKeys
+      : Object.keys(env);
+    const rows = orderedKeys.map((key) => ({ key, value: env[key] ?? '' }));
+    return rows.length > 0 ? rows : [{ key: '', value: '' }];
+  }
+
   const dialogInitial: ServerFormValues | undefined =
     dialogMode === 'edit' && editingServer
       ? {
@@ -505,6 +507,11 @@ export default function App() {
           description: editingServer.description,
           auth: editingServer.auth,
           proxyThroughLocal: editingServer.proxyThroughLocal ?? true,
+          transport: editingServer.transport ?? 'http',
+          stdioCommand: editingServer.stdio?.command ?? '',
+          stdioArgsText: (editingServer.stdio?.args ?? []).join('\n'),
+          stdioCwd: editingServer.stdio?.cwd ?? '',
+          stdioEnvRows: stdioEnvRowsForDialog(editingServer),
         }
       : undefined;
 
