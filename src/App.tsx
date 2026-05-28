@@ -16,7 +16,16 @@ import {
 import { Logo } from './components/Logo';
 import { GlobalSearch } from './components/GlobalSearch';
 import { formatConnectionError } from './lib/connectionErrorMessage';
-import { connect, disconnect, callTool as mcpCallTool, onToolsChanged, refetchTools, listResources, listPrompts } from './lib/mcpClient';
+import {
+  connect,
+  connectStdio,
+  disconnect,
+  callTool as mcpCallTool,
+  onToolsChanged,
+  refetchTools,
+  listResources,
+  listPrompts,
+} from './lib/mcpClient';
 import { detectMetaTools } from './lib/discovery/detect';
 import { runDiscovery } from './lib/discovery/orchestrator';
 import { loadLegacyServers, type StoredServer } from './lib/storage';
@@ -29,18 +38,43 @@ import {
   saveVault,
   unlockVault,
 } from './lib/vault/service';
-import type { DiscoveryRun, MetaToolBinding, ServerAuth, ServerEntry } from './types';
+import type {
+  DiscoveryRun,
+  MetaToolBinding,
+  ServerAuth,
+  ServerEntry,
+  ServerStdioConfig,
+  ServerTransport,
+} from './types';
 
 type VaultPhase = 'loading' | 'needs-setup' | 'needs-unlock' | 'ready';
+
+type ConnectOptions = {
+  url?: string;
+  auth?: ServerAuth;
+  proxyThroughLocal?: boolean;
+  transport?: ServerTransport;
+  stdio?: ServerStdioConfig;
+  stdioEnv?: Record<string, string>;
+};
+
+type ExtendedServerFormValues = ServerFormValues & {
+  transport?: ServerTransport;
+  stdio?: ServerStdioConfig;
+  stdioEnv?: Record<string, string>;
+};
 
 function fromStoredServers(stored: StoredServer[]): ServerEntry[] {
   return stored.map((s) => ({
     id: s.id,
     name: s.name,
-    url: s.url,
+    url: s.url ?? '',
     description: s.description,
     auth: s.auth,
     proxyThroughLocal: s.proxyThroughLocal ?? true,
+    transport: s.transport ?? 'http',
+    stdio: s.stdio,
+    stdioEnv: s.stdioEnv,
     custom: s.custom ?? true,
     status: 'disconnected',
   }));
@@ -55,6 +89,9 @@ function toStoredServers(servers: ServerEntry[]): StoredServer[] {
     custom: server.custom,
     auth: server.auth,
     proxyThroughLocal: server.proxyThroughLocal ?? true,
+    transport: server.transport,
+    stdio: server.stdio,
+    stdioEnv: server.stdioEnv,
   }));
 }
 
@@ -188,20 +225,26 @@ export default function App() {
    * When opening from Add/Edit, pass `connection` so connect runs with the submitted URL/auth
    * even before React has committed the new/updated server row (avoids a stale `servers.find`).
    */
-  async function handleConnect(
-    id: string,
-    connection?: { url: string; auth?: ServerAuth; proxyThroughLocal?: boolean },
-  ) {
+  async function handleConnect(id: string, connection?: ConnectOptions) {
     const s = servers.find((x) => x.id === id);
-    const url = connection?.url ?? s?.url;
-    const auth = connection !== undefined ? connection.auth : s?.auth;
-    const proxyThroughLocal = connection?.proxyThroughLocal ?? s?.proxyThroughLocal ?? true;
-    if (!url) return;
+    const transport = connection?.transport ?? s?.transport ?? 'http';
     setSelectedId(id);
     setSelectedToolName(null);
     updateServer(id, { status: 'connecting', error: undefined });
     try {
-      const tools = await connect(id, url, auth, proxyThroughLocal);
+      let tools;
+      if (transport === 'stdio') {
+        const stdio = connection?.stdio ?? s?.stdio;
+        const stdioEnv = connection?.stdioEnv ?? s?.stdioEnv ?? {};
+        if (!stdio?.command) return;
+        tools = await connectStdio(id, stdio, stdioEnv);
+      } else {
+        const url = connection?.url ?? s?.url;
+        const auth = connection !== undefined ? connection.auth : s?.auth;
+        const proxyThroughLocal = connection?.proxyThroughLocal ?? s?.proxyThroughLocal ?? true;
+        if (!url) return;
+        tools = await connect(id, url, auth, proxyThroughLocal);
+      }
       const metaTools = detectMetaTools(tools);
 
       // Fetch resources and prompts in parallel; ignore if server doesn't support them
@@ -357,26 +400,42 @@ export default function App() {
   }
 
   function handleSubmit(values: ServerFormValues) {
+    const extended = values as ExtendedServerFormValues;
+    const transport = extended.transport ?? 'http';
+    const isStdio = transport === 'stdio';
+
     if (dialogMode === 'add') {
       const existingIds = new Set(servers.map((s) => s.id));
       const id = makeId(values.name, existingIds);
       const entry: ServerEntry = {
         id,
         name: values.name,
-        url: values.url,
+        url: isStdio ? '' : values.url,
         description: values.description,
-        auth: values.auth,
-        proxyThroughLocal: values.proxyThroughLocal,
+        auth: isStdio ? undefined : values.auth,
+        proxyThroughLocal: isStdio ? undefined : values.proxyThroughLocal,
+        transport,
+        stdio: extended.stdio,
+        stdioEnv: extended.stdioEnv,
         custom: true,
         status: 'disconnected',
       };
       setServers((prev) => [...prev, entry]);
       handleDialogClose();
-      void handleConnect(id, {
-        url: values.url,
-        auth: values.auth,
-        proxyThroughLocal: values.proxyThroughLocal,
-      });
+      void handleConnect(
+        id,
+        isStdio
+          ? {
+              transport: 'stdio',
+              stdio: extended.stdio,
+              stdioEnv: extended.stdioEnv,
+            }
+          : {
+              url: values.url,
+              auth: values.auth,
+              proxyThroughLocal: values.proxyThroughLocal,
+            },
+      );
       return;
     }
 
@@ -388,17 +447,29 @@ export default function App() {
       }
       updateServer(editingId, {
         name: values.name,
-        url: values.url,
+        url: isStdio ? '' : values.url,
         description: values.description,
-        auth: values.auth,
-        proxyThroughLocal: values.proxyThroughLocal,
+        auth: isStdio ? undefined : values.auth,
+        proxyThroughLocal: isStdio ? undefined : values.proxyThroughLocal,
+        transport,
+        stdio: extended.stdio,
+        stdioEnv: extended.stdioEnv,
       });
       handleDialogClose();
-      void handleConnect(editingId, {
-        url: values.url,
-        auth: values.auth,
-        proxyThroughLocal: values.proxyThroughLocal,
-      });
+      void handleConnect(
+        editingId,
+        isStdio
+          ? {
+              transport: 'stdio',
+              stdio: extended.stdio,
+              stdioEnv: extended.stdioEnv,
+            }
+          : {
+              url: values.url,
+              auth: values.auth,
+              proxyThroughLocal: values.proxyThroughLocal,
+            },
+      );
     }
   }
 
