@@ -1,8 +1,20 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
-import type { ResourceEntry, ResourceTemplate, ResourceContent, PromptDef, PromptMessage, ServerAuth, ToolDef, ToolResult } from '../types';
+import type {
+  ResourceEntry,
+  ResourceTemplate,
+  ResourceContent,
+  PromptDef,
+  PromptMessage,
+  ServerAuth,
+  ServerStdioConfig,
+  ToolDef,
+  ToolResult,
+} from '../types';
 import { traceOptionalProtocolCall, traceProtocolCall } from './protocolTrace';
+import { stdioBridgeMcpUrl } from './stdioParse';
+import { startStdioSession, stopStdioSession } from './stdioSession';
 
 const clients = new Map<string, Client>();
 const transports = new Map<string, StreamableHTTPClientTransport>();
@@ -92,6 +104,15 @@ export async function connect(
   return list.tools as unknown as ToolDef[];
 }
 
+export async function connectStdio(
+  serverId: string,
+  stdio: ServerStdioConfig,
+  stdioEnv: Record<string, string> = {},
+): Promise<ToolDef[]> {
+  await startStdioSession(serverId, stdio, stdioEnv);
+  return connect(serverId, stdioBridgeMcpUrl(serverId), undefined, false);
+}
+
 export async function disconnect(serverId: string): Promise<void> {
   const client = clients.get(serverId);
   if (client) {
@@ -111,6 +132,7 @@ export async function disconnect(serverId: string): Promise<void> {
     }
     transports.delete(serverId);
   }
+  await stopStdioSession(serverId);
 }
 
 export async function callTool(
