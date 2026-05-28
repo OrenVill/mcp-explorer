@@ -72,13 +72,38 @@ export function requestInitFromAuth(auth: ServerAuth | undefined): RequestInit |
   return { headers };
 }
 
+async function releaseHttpConnection(serverId: string): Promise<void> {
+  const client = clients.get(serverId);
+  if (client) {
+    try {
+      await client.close();
+    } catch {
+      /* ignore close errors */
+    }
+    clients.delete(serverId);
+  }
+  const transport = transports.get(serverId);
+  if (transport) {
+    try {
+      await transport.close();
+    } catch {
+      /* ignore */
+    }
+    transports.delete(serverId);
+  }
+}
+
 export async function connect(
   serverId: string,
   url: string,
   auth?: ServerAuth,
   proxyThroughLocal = true,
+  preserveStdioSession = false,
 ): Promise<ToolDef[]> {
-  await disconnect(serverId);
+  await releaseHttpConnection(serverId);
+  if (!preserveStdioSession) {
+    await stopStdioSession(serverId);
+  }
 
   const requestInit = requestInitFromAuth(auth);
   const transport = new StreamableHTTPClientTransport(
@@ -109,29 +134,13 @@ export async function connectStdio(
   stdio: ServerStdioConfig,
   stdioEnv: Record<string, string> = {},
 ): Promise<ToolDef[]> {
+  await stopStdioSession(serverId);
   await startStdioSession(serverId, stdio, stdioEnv);
-  return connect(serverId, stdioBridgeMcpUrl(serverId), undefined, false);
+  return connect(serverId, stdioBridgeMcpUrl(serverId), undefined, false, true);
 }
 
 export async function disconnect(serverId: string): Promise<void> {
-  const client = clients.get(serverId);
-  if (client) {
-    try {
-      await client.close();
-    } catch {
-      /* ignore close errors */
-    }
-    clients.delete(serverId);
-  }
-  const transport = transports.get(serverId);
-  if (transport) {
-    try {
-      await transport.close();
-    } catch {
-      /* ignore */
-    }
-    transports.delete(serverId);
-  }
+  await releaseHttpConnection(serverId);
   await stopStdioSession(serverId);
 }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -145,7 +146,9 @@ export async function startSession(serverId, { command, args, cwd, env }) {
   try {
     await stdioClient.connect(stdioTransport);
     facade = createFacadeServer(stdioClient);
-    httpTransport = new StreamableHTTPServerTransport();
+    httpTransport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+    });
     await facade.connect(httpTransport);
 
     const session = {
