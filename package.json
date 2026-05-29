@@ -1,6 +1,6 @@
 {
   "name": "@orenvill/mcp-explorer",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Browser-based explorer for MCP servers over streamable HTTP — list and invoke tools with auto-generated forms.",
   "license": "MIT",
   "type": "module",
@@ -27,6 +27,8 @@
     "server.js",
     "proxy.js",
     "proxy.d.ts",
+    "stdio-bridge.js",
+    "stdio-bridge.d.ts",
     "vault-file-handler.js",
     "vault-file-handler.d.ts",
     "app-data-handler.js",
